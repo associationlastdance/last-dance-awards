@@ -291,6 +291,7 @@ async function signIn(email) {
 function signOut() {
   if (!confirm('Sign out?')) return;
   localStorage.removeItem('lda_voter_email');
+  localStorage.removeItem('lda_nominated');
   currentVoterEmail = null;
   document.getElementById('emailInput').value = '';
   document.getElementById('emailErr').textContent = '';
