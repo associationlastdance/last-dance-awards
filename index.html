@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Last Dance Awards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e8e0d0; min-height: 100vh; }
+#lda { position: relative; max-width: 700px; margin: 0 auto; min-height: 100vh; }
+.lda-bg { position: fixed; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.07) 0%, transparent 55%); z-index: 0; }
+.lda-wrap { position: relative; z-index: 1; }
+.lda-header { text-align: center; padding: 2.5rem 1.5rem 1.5rem; border-bottom: 0.5px solid rgba(201,168,76,0.18); }
+.lda-eye { font-size: 10px; font-weight: 600; letter-spacing: 0.3em; color: #c9a84c; text-transform: uppercase; margin-bottom: 10px; }
+.lda-title { font-family: 'Playfair Display', Georgia, serif; font-size: 34px; font-weight: 400; color: #faf7f2; line-height: 1.1; margin-bottom: 4px; }
+.lda-title em { color: #c9a84c; font-style: italic; }
+.lda-sub { font-family: 'Playfair Display', Georgia, serif; font-size: 14px; color: #8a8070; }
+.lda-div { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 12px; }
+.lda-line { flex: 1; max-width: 80px; height: 0.5px; }
+.lda-line.l { background: linear-gradient(90deg, transparent, #c9a84c); }
+.lda-line.r { background: linear-gradient(90deg, #c9a84c, transparent); }
+.lda-diamond { width: 6px; height: 6px; background: #c9a84c; transform: rotate(45deg); }
+.lda-nav { display: flex; border-bottom: 0.5px solid rgba(201,168,76,0.12); position: sticky; top: 0; background: #0a0a0a; z-index: 10; }
+.lda-tab { flex: 1; padding: 14px 8px; text-align: center; font-size: 10px; font-weight: 600; letter-spacing: 0.15em; text-transform: uppercase; color: #8a8070; cursor: pointer; border: none; background: transparent; border-bottom: 2px solid transparent; transition: all 0.15s; }
+.lda-tab:hover { color: #e8d5a3; }
+.lda-tab.active { color: #c9a84c; border-bottom-color: #c9a84c; }
+.lda-panel { display: none; padding: 1.5rem; }
+.lda-panel.active { display: block; }
+.phase-banner { background: rgba(201,168,76,0.07); border: 0.5px solid rgba(201,168,76,0.25); border-radius: 8px; padding: 11px 14px; margin-bottom: 1.25rem; display: flex; align-items: center; gap: 9px; }
+.phase-dot { width: 7px; height: 7px; border-radius: 50%; background: #c9a84c; flex-shrink: 0; animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.35} }
+.phase-text { font-size: 12px; color: #e8d5a3; }
+.phase-text strong { font-weight: 600; }
+.cat-card { background: #1a1a1a; border: 0.5px solid rgba(201,168,76,0.12); border-radius: 10px; padding: 1.1rem; margin-bottom: 0.875rem; transition: border-color 0.2s; }
+.cat-card:hover { border-color: rgba(201,168,76,0.25); }
+.cat-hd { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.cat-name { font-family: 'Playfair Display', Georgia, serif; font-size: 16px; color: #faf7f2; }
+.cat-badge { font-size: 9px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #c9a84c; background: rgba(201,168,76,0.1); padding: 3px 8px; border-radius: 99px; }
+.nom-row { display: flex; gap: 7px; }
+.duo-col { display: flex; flex-direction: column; gap: 7px; }
+.duo-inputs { display: flex; gap: 7px; }
+.nom-inp { flex: 1; background: #111; border: 0.5px solid rgba(201,168,76,0.18); border-radius: 6px; padding: 9px 12px; font-size: 14px; color: #e8e0d0; font-family: inherit; outline: none; transition: border-color 0.2s; }
+.nom-inp:focus { border-color: #c9a84c; }
+.nom-inp::placeholder { color: #5a5040; }
+.gold-btn { background: #c9a84c; color: #0a0a0a; border: none; border-radius: 6px; padding: 9px 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; font-family: inherit; }
+.gold-btn:hover { opacity: 0.85; }
+.outline-btn { width: 100%; margin-top: 9px; padding: 11px; background: transparent; border: 0.5px solid #c9a84c; color: #c9a84c; border-radius: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; font-family: inherit; }
+.outline-btn:hover { background: #c9a84c; color: #0a0a0a; }
+.vote-list { display: flex; flex-direction: column; gap: 7px; }
+.vote-opt { display: flex; align-items: center; gap: 9px; padding: 10px 12px; background: #111; border: 0.5px solid rgba(201,168,76,0.08); border-radius: 6px; cursor: pointer; transition: all 0.15s; user-select: none; }
+.vote-opt:hover { border-color: rgba(201,168,76,0.25); background: rgba(201,168,76,0.04); }
+.vote-opt.sel { border-color: #c9a84c; background: rgba(201,168,76,0.09); }
+.vote-radio { width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid #5a5040; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+.vote-opt.sel .vote-radio { border-color: #c9a84c; background: #c9a84c; }
+.vote-dot { width: 6px; height: 6px; border-radius: 50%; background: #0a0a0a; display: none; }
+.vote-opt.sel .vote-dot { display: block; }
+.vote-name { flex: 1; font-size: 13px; color: #e8e0d0; }
+.ok-msg { font-size: 11px; color: #c9a84c; text-align: center; margin-top: 7px; min-height: 16px; }
+.lb-cat { margin-bottom: 2rem; }
+.lb-cat-name { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: #faf7f2; margin-bottom: 3px; }
+.lb-phase { font-size: 10px; color: #c9a84c; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 10px; }
+.lb-entry { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #1a1a1a; border: 0.5px solid rgba(201,168,76,0.08); border-radius: 8px; margin-bottom: 5px; }
+.lb-entry.top { border-color: rgba(201,168,76,0.35); background: rgba(201,168,76,0.06); }
+.lb-rank { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: #5a5040; width: 26px; text-align: center; flex-shrink: 0; }
+.lb-entry.top .lb-rank { color: #c9a84c; }
+.lb-name { flex: 1; font-size: 13px; color: #e8e0d0; }
+.lb-bar-wrap { width: 80px; height: 3px; background: #2a2a2a; border-radius: 99px; overflow: hidden; }
+.lb-bar { height: 100%; background: #c9a84c; border-radius: 99px; transition: width 0.5s; }
+.lb-votes { font-size: 11px; color: #5a5040; min-width: 40px; text-align: right; }
+.hidden-msg { text-align: center; padding: 3rem 1rem; color: #5a5040; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-style: italic; line-height: 1.7; }
+.admin-gate { text-align: center; padding: 2.5rem 1rem; }
+.admin-gate-title { font-family: 'Playfair Display', Georgia, serif; font-size: 20px; color: #faf7f2; margin-bottom: 6px; }
+.admin-gate-sub { font-size: 12px; color: #5a5040; margin-bottom: 1.5rem; }
+.pw-row { display: flex; gap: 8px; max-width: 300px; margin: 0 auto; }
+.pw-inp { flex: 1; background: #111; border: 0.5px solid rgba(201,168,76,0.18); border-radius: 6px; padding: 10px 12px; font-size: 14px; color: #e8e0d0; font-family: inherit; outline: none; }
+.pw-inp:focus { border-color: #c9a84c; }
+.pw-err { font-size: 12px; color: #e24b4a; margin-top: 8px; min-height: 16px; }
+.admin-body { display: none; }
+.admin-body.open { display: block; }
+.admin-sec { margin-bottom: 2rem; }
+.admin-sec-title { font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: #c9a84c; margin-bottom: 1rem; padding-bottom: 8px; border-bottom: 0.5px solid rgba(201,168,76,0.15); }
+.phase-btns { display: flex; gap: 7px; flex-wrap: wrap; }
+.phase-btn { padding: 8px 13px; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; border-radius: 6px; cursor: pointer; font-family: inherit; background: #111; border: 0.5px solid rgba(201,168,76,0.18); color: #5a5040; transition: all 0.15s; }
+.phase-btn.active { background: #c9a84c; color: #0a0a0a; border-color: #c9a84c; }
+.add-cat-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.admin-inp { flex: 1; min-width: 140px; background: #111; border: 0.5px solid rgba(201,168,76,0.18); border-radius: 6px; padding: 9px 12px; font-size: 14px; color: #e8e0d0; font-family: inherit; outline: none; }
+.admin-inp:focus { border-color: #c9a84c; }
+.admin-sel { background: #111; border: 0.5px solid rgba(201,168,76,0.18); border-radius: 6px; padding: 9px 12px; font-size: 13px; color: #e8e0d0; font-family: inherit; outline: none; cursor: pointer; }
+.admin-cat-item { background: #111; border: 0.5px solid rgba(201,168,76,0.1); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
+.admin-cat-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.admin-cat-name { flex: 1; font-family: 'Playfair Display', Georgia, serif; font-size: 14px; color: #faf7f2; }
+.del-btn { background: transparent; border: 0.5px solid rgba(226,75,74,0.3); color: #e24b4a; border-radius: 4px; padding: 4px 9px; font-size: 10px; cursor: pointer; font-family: inherit; }
+.nom-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 7px; }
+.nom-tag { font-size: 11px; padding: 3px 9px; border-radius: 99px; background: rgba(201,168,76,0.09); color: #e8d5a3; border: 0.5px solid rgba(201,168,76,0.18); display: flex; align-items: center; gap: 5px; }
+.tag-approve { background: none; border: none; color: #c9a84c; cursor: pointer; font-size: 13px; padding: 0; line-height: 1; }
+.tag-reject { background: none; border: none; color: #e24b4a; cursor: pointer; font-size: 13px; padding: 0; line-height: 1; }
+.approved-tag { font-size: 11px; padding: 3px 9px; border-radius: 99px; background: rgba(201,168,76,0.04); color: #5a5040; border: 0.5px solid rgba(201,168,76,0.08); }
+.sec-label { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #5a5040; margin-bottom: 5px; }
+.empty-note { font-size: 12px; color: #5a5040; font-style: italic; }
+.lda-footer { text-align: center; padding: 1.5rem; font-size: 10px; color: #3a3028; letter-spacing: 0.12em; border-top: 0.5px solid rgba(201,168,76,0.08); margin-top: 2rem; }
+@media (max-width: 480px) {
+  .lda-title { font-size: 26px; }
+  .duo-inputs { flex-direction: column; }
+  .phase-btns { gap: 5px; }
+  .phase-btn { font-size: 9px; padding: 7px 10px; }
+}
+</style>
+</head>
+<body>
+<div id="lda">
+  <div class="lda-bg"></div>
+  <div class="lda-wrap">
+    <header class="lda-header">
+      <div class="lda-eye">EHL &middot; Lausanne</div>
+      <div class="lda-title">The Last Dance <em>Awards</em></div>
+      <div class="lda-sub">Class of 2026 &middot; Gala Awards</div>
+      <div class="lda-div">
+        <div class="lda-line l"></div>
+        <div class="lda-diamond"></div>
+        <div class="lda-line r"></div>
+      </div>
+    </header>
+
+    <nav class="lda-nav">
+      <button class="lda-tab active" onclick="showTab('nominate')">Nominate</button>
+      <button class="lda-tab" onclick="showTab('leaderboard')">Leaderboard</button>
+      <button class="lda-tab" onclick="showTab('admin')">Admin</button>
+    </nav>
+
+    <div class="lda-panel active" id="panel-nominate">
+      <div class="phase-banner">
+        <div class="phase-dot"></div>
+        <div class="phase-text" id="phaseBanner"><strong>Nominations open</strong> &mdash; submit your candidates for each category</div>
+      </div>
+      <div id="nominateList"></div>
+    </div>
+
+    <div class="lda-panel" id="panel-leaderboard">
+      <div id="leaderboardContent"></div>
+    </div>
+
+    <div class="lda-panel" id="panel-admin">
+      <div class="admin-gate" id="adminGate">
+        <div class="admin-gate-title">Admin access</div>
+        <div class="admin-gate-sub">Enter your password to manage the awards</div>
+        <div class="pw-row">
+          <input class="pw-inp" type="password" id="pwInput" placeholder="Password" onkeydown="if(event.key==='Enter')adminLogin()">
+          <button class="gold-btn" onclick="adminLogin()">Enter</button>
+        </div>
+        <div class="pw-err" id="pwErr"></div>
+      </div>
+      <div class="admin-body" id="adminBody">
+        <div class="admin-sec">
+          <div class="admin-sec-title">Current phase</div>
+          <div class="phase-btns" id="phaseBtns"></div>
+        </div>
+        <div class="admin-sec">
+          <div class="admin-sec-title">Add a category</div>
+          <div class="add-cat-row">
+            <input class="admin-inp" id="newCatName" placeholder="Category name (e.g. Best Dressed)">
+            <select class="admin-sel" id="newCatType">
+              <option value="solo">Solo</option>
+              <option value="duo">Duo</option>
+            </select>
+            <button class="gold-btn" onclick="addCategory()">Add</button>
+          </div>
+        </div>
+        <div class="admin-sec">
+          <div class="admin-sec-title">Manage categories</div>
+          <div id="adminCatList"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="lda-footer">THE LAST DANCE &middot; EHL LAUSANNE &middot; 2026</footer>
+  </div>
+</div>
+
+<script>
+const PW = "laelia";
+const PHASES = [
+  {id:"nominations",label:"Nominations open"},
+  {id:"voting",label:"Voting open"},
+  {id:"top20",label:"Top 20 revealed"},
+  {id:"top10",label:"Top 10 revealed"},
+  {id:"top5",label:"Top 5 revealed"},
+  {id:"winners",label:"Winners revealed"}
+];
+
+let S = {
+  phase:"nominations",
+  categories:[
+    {id:1,name:"Best Dressed",type:"solo",nominations:[],approved:[],votes:{}},
+    {id:2,name:"Best Duo",type:"duo",nominations:[],approved:[],votes:{}}
+  ],
+  nextId:3,
+  userVotes:{},
+  userNominated:{}
+};
+
+function save(){ try{localStorage.setItem('lda_v2',JSON.stringify(S));}catch(e){} }
+function load(){ try{const d=localStorage.getItem('lda_v2');if(d)S=JSON.parse(d);}catch(e){} }
+
+function showTab(tab){
+  document.querySelectorAll('.lda-tab').forEach((t,i)=>t.classList.toggle('active',['nominate','leaderboard','admin'][i]===tab));
+  document.querySelectorAll('.lda-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  if(tab==='nominate')renderNominate();
+  if(tab==='leaderboard')renderLeaderboard();
+  if(tab==='admin')renderAdmin();
+}
+
+function adminLogin(){
+  if(document.getElementById('pwInput').value===PW){
+    document.getElementById('adminGate').style.display='none';
+    document.getElementById('adminBody').classList.add('open');
+    renderAdmin();
+  }else{
+    document.getElementById('pwErr').textContent='Incorrect password';
+  }
+}
+
+function setPhase(p){S.phase=p;save();renderAdmin();renderNominate();}
+
+function addCategory(){
+  const name=document.getElementById('newCatName').value.trim();
+  const type=document.getElementById('newCatType').value;
+  if(!name)return;
+  S.categories.push({id:S.nextId++,name,type,nominations:[],approved:[],votes:{}});
+  document.getElementById('newCatName').value='';
+  save();renderAdmin();
+}
+
+function deleteCategory(id){S.categories=S.categories.filter(c=>c.id!==id);save();renderAdmin();}
+
+function approveNom(catId,nom){
+  const cat=S.categories.find(c=>c.id===catId);if(!cat)return;
+  if(!cat.approved.includes(nom))cat.approved.push(nom);
+  cat.nominations=cat.nominations.filter(n=>n!==nom);
+  if(!cat.votes[nom])cat.votes[nom]=0;
+  save();renderAdmin();
+}
+
+function rejectNom(catId,nom){
+  const cat=S.categories.find(c=>c.id===catId);if(!cat)return;
+  cat.nominations=cat.nominations.filter(n=>n!==nom);
+  save();renderAdmin();
+}
+
+function submitNom(catId){
+  const cat=S.categories.find(c=>c.id===catId);if(!cat)return;
+  const v1=document.getElementById('nom_'+catId+'_1').value.trim();
+  const v2=cat.type==='duo'?document.getElementById('nom_'+catId+'_2').value.trim():null;
+  if(!v1||(cat.type==='duo'&&!v2))return;
+  const entry=cat.type==='duo'?v1+' & '+v2:v1;
+  if(!cat.nominations.includes(entry)&&!cat.approved.includes(entry))cat.nominations.push(entry);
+  S.userNominated[catId]=true;
+  document.getElementById('nom_'+catId+'_1').value='';
+  if(cat.type==='duo')document.getElementById('nom_'+catId+'_2').value='';
+  const m=document.getElementById('ok_'+catId);
+  if(m){m.textContent='Nomination submitted ❖';setTimeout(()=>m.textContent='',2500);}
+  save();
+}
+
+function selectVote(el,name){
+  document.querySelectorAll('.vote-opt').forEach(o=>{
+    if(o.querySelector('input[name="'+name+'"]')){
+      const isThis=o===el;
+      o.classList.toggle('sel',isThis);
+      const inp=o.querySelector('input[type=radio]');
+      if(inp)inp.checked=isThis;
+    }
+  });
+}
+
+function submitVote(catId){
+  const cat=S.categories.find(c=>c.id===catId);if(!cat)return;
+  const sel=document.querySelector('input[name="v_'+catId+'"]:checked');if(!sel)return;
+  const nom=sel.value;
+  const prev=S.userVotes[catId];
+  if(prev&&cat.votes[prev])cat.votes[prev]--;
+  cat.votes[nom]=(cat.votes[nom]||0)+1;
+  S.userVotes[catId]=nom;
+  const m=document.getElementById('ok_'+catId);
+  if(m){m.textContent='Vote recorded ❖';setTimeout(()=>m.textContent='',2500);}
+  save();renderNominate();
+}
+
+function getCount(){
+  const p=S.phase;
+  if(p==='top20')return 20;if(p==='top10')return 10;
+  if(p==='top5')return 5;if(p==='winners')return 1;
+  return null;
+}
+
+function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
+function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function renderNominate(){
+  const el=document.getElementById('nominateList');
+  const banner=document.getElementById('phaseBanner');
+  const p=S.phase;
+  if(p==='nominations')banner.innerHTML='<strong>Nominations open</strong> &mdash; submit your candidates for each category';
+  else if(p==='voting')banner.innerHTML='<strong>Voting open</strong> &mdash; cast your vote for each category';
+  else banner.innerHTML='<strong>Voting closed</strong> &mdash; results will be revealed at the gala';
+  if(!S.categories.length){el.innerHTML='<div class="hidden-msg">Categories coming soon ❖</div>';return;}
+  el.innerHTML=S.categories.map(cat=>{
+    const isDuo=cat.type==='duo';
+    if(p==='nominations'){
+      const done=S.userNominated[cat.id];
+      return `<div class="cat-card">
+        <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo?'Duo':'Solo'}</div></div>
+        ${done?'<div class="ok-msg">Nomination submitted &mdash; thank you ❖</div>':
+        isDuo?`<div class="duo-col">
+          <div class="duo-inputs">
+            <input class="nom-inp" id="nom_${cat.id}_1" placeholder="First person">
+            <input class="nom-inp" id="nom_${cat.id}_2" placeholder="Second person">
+          </div>
+          <button class="gold-btn" onclick="submitNom(${cat.id})">Nominate</button>
+        </div><div class="ok-msg" id="ok_${cat.id}"></div>`:
+        `<div class="nom-row">
+          <input class="nom-inp" id="nom_${cat.id}_1" placeholder="Full name" onkeydown="if(event.key==='Enter')submitNom(${cat.id})">
+          <button class="gold-btn" onclick="submitNom(${cat.id})">Nominate</button>
+        </div><div class="ok-msg" id="ok_${cat.id}"></div>`}
+      </div>`;
+    }else if(p==='voting'){
+      const app=cat.approved;
+      if(!app.length)return `<div class="cat-card"><div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo?'Duo':'Solo'}</div></div><div class="empty-note" style="margin-top:6px">Nominees being confirmed &mdash; check back soon</div></div>`;
+      const uv=S.userVotes[cat.id];
+      return `<div class="cat-card">
+        <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo?'Duo':'Solo'}</div></div>
+        <div class="vote-list">${app.map(nom=>`
+          <div class="vote-opt${uv===nom?' sel':''}" onclick="selectVote(this,'v_${cat.id}')">
+            <div class="vote-radio"><div class="vote-dot"></div></div>
+            <input type="radio" name="v_${cat.id}" value="${escHtml(nom)}" style="display:none"${uv===nom?' checked':''}>
+            <div class="vote-name">${escHtml(nom)}</div>
+          </div>`).join('')}
+        </div>
+        <button class="outline-btn" onclick="submitVote(${cat.id})">${uv?'Update vote':'Cast vote'}</button>
+        <div class="ok-msg" id="ok_${cat.id}"></div>
+      </div>`;
+    }else{
+      return `<div class="cat-card"><div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo?'Duo':'Solo'}</div></div><div class="hidden-msg" style="padding:1rem 0">Results will be revealed at The Last Dance Gala ❖</div></div>`;
+    }
+  }).join('');
+}
+
+function renderLeaderboard(){
+  const el=document.getElementById('leaderboardContent');
+  const count=getCount();
+  if(!count){el.innerHTML='<div class="hidden-msg">The leaderboard will be revealed at select events throughout the semester ❖<br><br><span style="font-size:12px;letter-spacing:0.1em;font-family:inherit">Stay tuned</span></div>';return;}
+  if(!S.categories.length){el.innerHTML='<div class="hidden-msg">No categories yet</div>';return;}
+  el.innerHTML=S.categories.map(cat=>{
+    const sorted=[...cat.approved].sort((a,b)=>(cat.votes[b]||0)-(cat.votes[a]||0)).slice(0,count);
+    const max=sorted.length?(cat.votes[sorted[0]]||1):1;
+    const label=count===1?'Winner':`Top ${Math.min(count,sorted.length)}`;
+    return `<div class="lb-cat">
+      <div class="lb-cat-name">${escHtml(cat.name)}</div>
+      <div class="lb-phase">${label} &middot; ${cat.type==='duo'?'Duo':'Solo'}</div>
+      ${!sorted.length?'<div class="empty-note">No nominees yet</div>':sorted.map((nom,i)=>`
+        <div class="lb-entry${i===0?' top':''}">
+          <div class="lb-rank">${i+1}</div>
+          <div class="lb-name">${escHtml(nom)}</div>
+          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round(((cat.votes[nom]||0)/max)*100)}%"></div></div>
+          <div class="lb-votes">${cat.votes[nom]||0}</div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderAdmin(){
+  const pb=document.getElementById('phaseBtns');
+  if(pb)pb.innerHTML=PHASES.map(p=>`<button class="phase-btn${S.phase===p.id?' active':''}" onclick="setPhase('${p.id}')">${p.label}</button>`).join('');
+  const list=document.getElementById('adminCatList');
+  if(!list)return;
+  if(!S.categories.length){list.innerHTML='<div class="empty-note">No categories yet &mdash; add one above</div>';return;}
+  list.innerHTML=S.categories.map(cat=>{
+    const pend=cat.nominations||[];
+    const appr=cat.approved||[];
+    return `<div class="admin-cat-item">
+      <div class="admin-cat-hd">
+        <div class="admin-cat-name">${escHtml(cat.name)} <span style="font-size:11px;color:#5a5040">(${cat.type})</span></div>
+        <button class="del-btn" onclick="deleteCategory(${cat.id})">Delete</button>
+      </div>
+      ${pend.length?`<div class="sec-label">Pending nominations</div><div class="nom-tags">${pend.map(n=>`<div class="nom-tag">${escHtml(n)}<button class="tag-approve" onclick="approveNom(${cat.id},'${esc(n)}')">&#10003;</button><button class="tag-reject" onclick="rejectNom(${cat.id},'${esc(n)}')">&#10005;</button></div>`).join('')}</div>`:''}
+      ${appr.length?`<div class="sec-label" style="${pend.length?'margin-top:8px':''}">Approved nominees</div><div class="nom-tags">${appr.map(n=>`<span class="approved-tag">${escHtml(n)}</span>`).join('')}</div>`:''}
+      ${!pend.length&&!appr.length?'<div class="empty-note">No nominations yet</div>':''}
+    </div>`;
+  }).join('');
+}
+
+load();
+renderNominate();
+</script>
+</body>
+</html>
