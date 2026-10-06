@@ -151,4 +151,317 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div class="admin-gate-title">Admin access</div>
         <div class="admin-gate-sub">Enter your password to manage the awards</div>
         <div class="pw-row">
-          <input
+          <input class="pw-inp" type="password" id="pwInput" placeholder="Password" onkeydown="if(event.key==='Enter')adminLogin()">
+          <button class="gold-btn" onclick="adminLogin()">Enter</button>
+        </div>
+        <div class="pw-err" id="pwErr"></div>
+      </div>
+      <div class="admin-body" id="adminBody">
+        <div class="admin-sec">
+          <div class="admin-sec-title">Current phase</div>
+          <div class="phase-btns" id="phaseBtns"></div>
+        </div>
+        <div class="admin-sec">
+          <div class="admin-sec-title">Add a category</div>
+          <div class="add-cat-row">
+            <input class="admin-inp" id="newCatName" placeholder="Category name (e.g. Best Dressed)">
+            <select class="admin-sel" id="newCatType">
+              <option value="solo">Solo</option>
+              <option value="duo">Duo</option>
+            </select>
+            <button class="gold-btn" onclick="addCategory()">Add</button>
+          </div>
+        </div>
+        <div class="admin-sec">
+          <div class="admin-sec-title">Manage categories</div>
+          <div id="adminCatList"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="lda-footer">THE LAST DANCE &middot; EHL LAUSANNE &middot; 2026</footer>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://jpccjxqpwtyqfzvhanjg.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwY2NqeHFwd3R5cWZ6dmhhbmpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyOTYzNDMsImV4cCI6MjEwNjg3MjM0M30.mmVF0kiWxUAq-8JyPXH7h3k3l98mZzNJ3BZ0Iz-bzN0';
+const PW = "laelia";
+const PHASES = [
+  {id:"nominations",label:"Nominations open"},
+  {id:"voting",label:"Voting open"},
+  {id:"top20",label:"Top 20 revealed"},
+  {id:"top10",label:"Top 10 revealed"},
+  {id:"top5",label:"Top 5 revealed"},
+  {id:"winners",label:"Winners revealed"}
+];
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function getVoterId() {
+  let id = localStorage.getItem('lda_voter_id');
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem('lda_voter_id', id); }
+  return id;
+}
+
+let currentPhase = 'nominations';
+let categories = [];
+let nominations = [];
+let userVotes = {};
+let userNominated = {};
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadAll() {
+  const voterId = getVoterId();
+  const { data: settings } = await sb.from('settings').select('phase').single();
+  if (settings) currentPhase = settings.phase;
+  const { data: cats } = await sb.from('categories').select('*').order('id');
+  categories = cats || [];
+  const { data: noms } = await sb.from('nominations').select('*, votes(count)').order('id');
+  nominations = (noms || []).map(n => ({...n, voteCount: n.votes?.[0]?.count || 0}));
+  const { data: myVotes } = await sb.from('votes').select('nomination_id').eq('voter_id', voterId);
+  userVotes = {};
+  (myVotes || []).forEach(v => userVotes[v.nomination_id] = true);
+  try { userNominated = JSON.parse(localStorage.getItem('lda_nominated') || '{}'); } catch(e) { userNominated = {}; }
+}
+
+function saveNominated() {
+  localStorage.setItem('lda_nominated', JSON.stringify(userNominated));
+}
+
+function showTab(tab) {
+  document.querySelectorAll('.lda-tab').forEach((t,i) => t.classList.toggle('active', ['nominate','leaderboard','admin'][i] === tab));
+  document.querySelectorAll('.lda-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  if (tab === 'nominate') renderNominate();
+  if (tab === 'leaderboard') renderLeaderboard();
+  if (tab === 'admin') renderAdmin();
+}
+
+function adminLogin() {
+  if (document.getElementById('pwInput').value === PW) {
+    document.getElementById('adminGate').style.display = 'none';
+    document.getElementById('adminBody').classList.add('open');
+    renderAdmin();
+  } else {
+    document.getElementById('pwErr').textContent = 'Incorrect password';
+  }
+}
+
+async function setPhase(p) {
+  await sb.from('settings').update({phase: p}).eq('id', 1);
+  currentPhase = p;
+  renderAdmin();
+  renderNominate();
+}
+
+async function addCategory() {
+  const name = document.getElementById('newCatName').value.trim();
+  const type = document.getElementById('newCatType').value;
+  if (!name) return;
+  const btn = document.querySelector('#adminBody .add-cat-row .gold-btn');
+  btn.disabled = true;
+  const { data, error } = await sb.from('categories').insert({name, type}).select().single();
+  if (!error && data) {
+    categories.push(data);
+    document.getElementById('newCatName').value = '';
+  }
+  btn.disabled = false;
+  renderAdmin();
+}
+
+async function deleteCategory(id) {
+  await sb.from('categories').delete().eq('id', id);
+  categories = categories.filter(c => c.id !== id);
+  nominations = nominations.filter(n => n.category_id !== id);
+  renderAdmin();
+}
+
+async function approveNom(nomId) {
+  await sb.from('nominations').update({status: 'approved'}).eq('id', nomId);
+  const nom = nominations.find(n => n.id === nomId);
+  if (nom) nom.status = 'approved';
+  renderAdmin();
+}
+
+async function rejectNom(nomId) {
+  await sb.from('nominations').delete().eq('id', nomId);
+  nominations = nominations.filter(n => n.id !== nomId);
+  renderAdmin();
+}
+
+async function submitNom(catId) {
+  const cat = categories.find(c => c.id === catId);
+  if (!cat) return;
+  const v1 = document.getElementById('nom_' + catId + '_1').value.trim();
+  const v2 = cat.type === 'duo' ? document.getElementById('nom_' + catId + '_2').value.trim() : null;
+  if (!v1 || (cat.type === 'duo' && !v2)) return;
+  const name = cat.type === 'duo' ? v1 + ' & ' + v2 : v1;
+  const btn = document.querySelector('[data-nom-btn="' + catId + '"]');
+  if (btn) btn.disabled = true;
+  const { data, error } = await sb.from('nominations').insert({category_id: catId, name, status: 'pending'}).select().single();
+  if (!error && data) {
+    nominations.push({...data, voteCount: 0});
+    userNominated[catId] = true;
+    saveNominated();
+    document.getElementById('nom_' + catId + '_1').value = '';
+    if (cat.type === 'duo') document.getElementById('nom_' + catId + '_2').value = '';
+    const m = document.getElementById('ok_' + catId);
+    if (m) { m.textContent = 'Nomination submitted ❖'; setTimeout(() => m.textContent = '', 2500); }
+  }
+  if (btn) btn.disabled = false;
+  renderNominate();
+}
+
+async function submitVote(catId) {
+  const sel = document.querySelector('input[name="v_' + catId + '"]:checked');
+  if (!sel) return;
+  const nomId = parseInt(sel.value);
+  const voterId = getVoterId();
+  const btn = document.querySelector('[data-vote-btn="' + catId + '"]');
+  if (btn) btn.disabled = true;
+  const catNomIds = nominations.filter(n => n.category_id === catId && n.status === 'approved').map(n => n.id);
+  const prevVotedId = catNomIds.find(id => userVotes[id]);
+  if (prevVotedId) {
+    await sb.from('votes').delete().eq('nomination_id', prevVotedId).eq('voter_id', voterId);
+    delete userVotes[prevVotedId];
+    const prev = nominations.find(n => n.id === prevVotedId);
+    if (prev && prev.voteCount > 0) prev.voteCount--;
+  }
+  const { error } = await sb.from('votes').insert({nomination_id: nomId, voter_id: voterId});
+  if (!error) {
+    userVotes[nomId] = true;
+    const nom = nominations.find(n => n.id === nomId);
+    if (nom) nom.voteCount++;
+    const m = document.getElementById('ok_' + catId);
+    if (m) { m.textContent = 'Vote recorded ❖'; setTimeout(() => m.textContent = '', 2500); }
+  }
+  if (btn) btn.disabled = false;
+  renderNominate();
+}
+
+function selectVote(el, catId) {
+  document.querySelectorAll('[data-vopt="' + catId + '"]').forEach(o => {
+    o.classList.remove('sel');
+    const inp = o.querySelector('input[type=radio]');
+    if (inp) inp.checked = false;
+  });
+  el.classList.add('sel');
+  const inp = el.querySelector('input[type=radio]');
+  if (inp) inp.checked = true;
+}
+
+function getCount() {
+  const p = currentPhase;
+  if (p === 'top20') return 20;
+  if (p === 'top10') return 10;
+  if (p === 'top5') return 5;
+  if (p === 'winners') return 1;
+  return null;
+}
+
+function renderNominate() {
+  const el = document.getElementById('nominateList');
+  const banner = document.getElementById('phaseBanner');
+  const p = currentPhase;
+  if (p === 'nominations') banner.innerHTML = '<strong>Nominations open</strong> &mdash; submit your candidates for each category';
+  else if (p === 'voting') banner.innerHTML = '<strong>Voting open</strong> &mdash; cast your vote for each category';
+  else banner.innerHTML = '<strong>Voting closed</strong> &mdash; results will be revealed at the gala';
+  if (!categories.length) { el.innerHTML = '<div class="hidden-msg">Categories coming soon ❖</div>'; return; }
+  el.innerHTML = categories.map(cat => {
+    const isDuo = cat.type === 'duo';
+    const catNoms = nominations.filter(n => n.category_id === cat.id);
+    if (p === 'nominations') {
+      const done = userNominated[cat.id];
+      return `<div class="cat-card">
+        <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div>
+        ${done ? '<div class="ok-msg">Nomination submitted — thank you ❖</div>' :
+        isDuo ? `<div class="duo-col">
+          <div class="duo-inputs">
+            <input class="nom-inp" id="nom_${cat.id}_1" placeholder="First person">
+            <input class="nom-inp" id="nom_${cat.id}_2" placeholder="Second person">
+          </div>
+          <button class="gold-btn" data-nom-btn="${cat.id}" onclick="submitNom(${cat.id})">Nominate</button>
+        </div><div class="ok-msg" id="ok_${cat.id}"></div>` :
+        `<div class="nom-row">
+          <input class="nom-inp" id="nom_${cat.id}_1" placeholder="Full name" onkeydown="if(event.key==='Enter')submitNom(${cat.id})">
+          <button class="gold-btn" data-nom-btn="${cat.id}" onclick="submitNom(${cat.id})">Nominate</button>
+        </div><div class="ok-msg" id="ok_${cat.id}"></div>`}
+      </div>`;
+    } else if (p === 'voting') {
+      const approved = catNoms.filter(n => n.status === 'approved');
+      if (!approved.length) return `<div class="cat-card"><div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div><div class="empty-note" style="margin-top:6px">Nominees being confirmed — check back soon</div></div>`;
+      const hasVoted = approved.some(n => userVotes[n.id]);
+      return `<div class="cat-card">
+        <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div>
+        <div class="vote-list">${approved.map(nom => `
+          <div class="vote-opt${userVotes[nom.id] ? ' sel' : ''}" data-vopt="${cat.id}" onclick="selectVote(this,${cat.id})">
+            <div class="vote-radio"><div class="vote-dot"></div></div>
+            <input type="radio" name="v_${cat.id}" value="${nom.id}" style="display:none"${userVotes[nom.id] ? ' checked' : ''}>
+            <div class="vote-name">${escHtml(nom.name)}</div>
+          </div>`).join('')}
+        </div>
+        <button class="outline-btn" data-vote-btn="${cat.id}" onclick="submitVote(${cat.id})">${hasVoted ? 'Update vote' : 'Cast vote'}</button>
+        <div class="ok-msg" id="ok_${cat.id}"></div>
+      </div>`;
+    } else {
+      return `<div class="cat-card"><div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div><div class="hidden-msg" style="padding:1rem 0">Results will be revealed at The Last Dance Gala ❖</div></div>`;
+    }
+  }).join('');
+}
+
+function renderLeaderboard() {
+  const el = document.getElementById('leaderboardContent');
+  const count = getCount();
+  if (!count) { el.innerHTML = '<div class="hidden-msg">The leaderboard will be revealed at select events throughout the semester ❖<br><br><span style="font-size:12px;letter-spacing:0.1em;font-family:inherit">Stay tuned</span></div>'; return; }
+  if (!categories.length) { el.innerHTML = '<div class="hidden-msg">No categories yet</div>'; return; }
+  el.innerHTML = categories.map(cat => {
+    const approved = nominations.filter(n => n.category_id === cat.id && n.status === 'approved');
+    const sorted = [...approved].sort((a, b) => b.voteCount - a.voteCount).slice(0, count);
+    const max = sorted.length ? (sorted[0].voteCount || 1) : 1;
+    const label = count === 1 ? 'Winner' : `Top ${Math.min(count, sorted.length)}`;
+    return `<div class="lb-cat">
+      <div class="lb-cat-name">${escHtml(cat.name)}</div>
+      <div class="lb-phase">${label} &middot; ${cat.type === 'duo' ? 'Duo' : 'Solo'}</div>
+      ${!sorted.length ? '<div class="empty-note">No nominees yet</div>' : sorted.map((nom, i) => `
+        <div class="lb-entry${i === 0 ? ' top' : ''}">
+          <div class="lb-rank">${i + 1}</div>
+          <div class="lb-name">${escHtml(nom.name)}</div>
+          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round((nom.voteCount / max) * 100)}%"></div></div>
+          <div class="lb-votes">${nom.voteCount}</div>
+        </div>`).join('')}
+    </div>`;
+  }).join('');
+}
+
+function renderAdmin() {
+  const pb = document.getElementById('phaseBtns');
+  if (pb) pb.innerHTML = PHASES.map(p => `<button class="phase-btn${currentPhase === p.id ? ' active' : ''}" onclick="setPhase('${p.id}')">${p.label}</button>`).join('');
+  const list = document.getElementById('adminCatList');
+  if (!list) return;
+  if (!categories.length) { list.innerHTML = '<div class="empty-note">No categories yet — add one above</div>'; return; }
+  list.innerHTML = categories.map(cat => {
+    const pend = nominations.filter(n => n.category_id === cat.id && n.status === 'pending');
+    const appr = nominations.filter(n => n.category_id === cat.id && n.status === 'approved');
+    return `<div class="admin-cat-item">
+      <div class="admin-cat-hd">
+        <div class="admin-cat-name">${escHtml(cat.name)} <span style="font-size:11px;color:#5a5040">(${cat.type})</span></div>
+        <button class="del-btn" onclick="deleteCategory(${cat.id})">Delete</button>
+      </div>
+      ${pend.length ? `<div class="sec-label">Pending nominations</div><div class="nom-tags">${pend.map(n => `<div class="nom-tag">${escHtml(n.name)}<button class="tag-approve" onclick="approveNom(${n.id})">&#10003;</button><button class="tag-reject" onclick="rejectNom(${n.id})">&#10005;</button></div>`).join('')}</div>` : ''}
+      ${appr.length ? `<div class="sec-label" style="${pend.length ? 'margin-top:8px' : ''}">Approved nominees</div><div class="nom-tags">${appr.map(n => `<span class="approved-tag">${escHtml(n.name)} <span style="color:#c9a84c">${n.voteCount}</span></span>`).join('')}</div>` : ''}
+      ${!pend.length && !appr.length ? '<div class="empty-note">No nominations yet</div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+(async () => {
+  await loadAll();
+  renderNominate();
+})();
+</script>
+</body>
+</html>
