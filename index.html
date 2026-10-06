@@ -6,6 +6,7 @@
 <title>The Last Dance Awards</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0a0a0a; color: #e8e0d0; min-height: 100vh; }
@@ -46,8 +47,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .nom-inp::placeholder { color: #5a5040; }
 .gold-btn { background: #c9a84c; color: #0a0a0a; border: none; border-radius: 6px; padding: 9px 16px; font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: opacity 0.15s; white-space: nowrap; font-family: inherit; }
 .gold-btn:hover { opacity: 0.85; }
+.gold-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .outline-btn { width: 100%; margin-top: 9px; padding: 11px; background: transparent; border: 0.5px solid #c9a84c; color: #c9a84c; border-radius: 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.15s; font-family: inherit; }
 .outline-btn:hover { background: #c9a84c; color: #0a0a0a; }
+.outline-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 .vote-list { display: flex; flex-direction: column; gap: 7px; }
 .vote-opt { display: flex; align-items: center; gap: 9px; padding: 10px 12px; background: #111; border: 0.5px solid rgba(201,168,76,0.08); border-radius: 6px; cursor: pointer; transition: all 0.15s; user-select: none; }
 .vote-opt:hover { border-color: rgba(201,168,76,0.25); background: rgba(201,168,76,0.04); }
@@ -58,6 +61,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .vote-opt.sel .vote-dot { display: block; }
 .vote-name { flex: 1; font-size: 13px; color: #e8e0d0; }
 .ok-msg { font-size: 11px; color: #c9a84c; text-align: center; margin-top: 7px; min-height: 16px; }
+.err-msg { font-size: 11px; color: #e24b4a; text-align: center; margin-top: 7px; min-height: 16px; }
 .lb-cat { margin-bottom: 2rem; }
 .lb-cat-name { font-family: 'Playfair Display', Georgia, serif; font-size: 18px; color: #faf7f2; margin-bottom: 3px; }
 .lb-phase { font-size: 10px; color: #c9a84c; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 10px; }
@@ -70,6 +74,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .lb-bar { height: 100%; background: #c9a84c; border-radius: 99px; transition: width 0.5s; }
 .lb-votes { font-size: 11px; color: #5a5040; min-width: 40px; text-align: right; }
 .hidden-msg { text-align: center; padding: 3rem 1rem; color: #5a5040; font-family: 'Playfair Display', Georgia, serif; font-size: 15px; font-style: italic; line-height: 1.7; }
+.loading-msg { text-align: center; padding: 2rem 1rem; color: #5a5040; font-size: 13px; }
 .admin-gate { text-align: center; padding: 2.5rem 1rem; }
 .admin-gate-title { font-family: 'Playfair Display', Georgia, serif; font-size: 20px; color: #faf7f2; margin-bottom: 6px; }
 .admin-gate-sub { font-size: 12px; color: #5a5040; margin-bottom: 1.5rem; }
@@ -132,13 +137,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="lda-panel active" id="panel-nominate">
       <div class="phase-banner">
         <div class="phase-dot"></div>
-        <div class="phase-text" id="phaseBanner"><strong>Nominations open</strong> &mdash; submit your candidates for each category</div>
+        <div class="phase-text" id="phaseBanner"><strong>Loading…</strong></div>
       </div>
-      <div id="nominateList"></div>
+      <div id="nominateList"><div class="loading-msg">Loading categories…</div></div>
     </div>
 
     <div class="lda-panel" id="panel-leaderboard">
-      <div id="leaderboardContent"></div>
+      <div id="leaderboardContent"><div class="loading-msg">Loading…</div></div>
     </div>
 
     <div class="lda-panel" id="panel-admin">
@@ -146,253 +151,4 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
         <div class="admin-gate-title">Admin access</div>
         <div class="admin-gate-sub">Enter your password to manage the awards</div>
         <div class="pw-row">
-          <input class="pw-inp" type="password" id="pwInput" placeholder="Password" onkeydown="if(event.key==='Enter')adminLogin()">
-          <button class="gold-btn" onclick="adminLogin()">Enter</button>
-        </div>
-        <div class="pw-err" id="pwErr"></div>
-      </div>
-      <div class="admin-body" id="adminBody">
-        <div class="admin-sec">
-          <div class="admin-sec-title">Current phase</div>
-          <div class="phase-btns" id="phaseBtns"></div>
-        </div>
-        <div class="admin-sec">
-          <div class="admin-sec-title">Add a category</div>
-          <div class="add-cat-row">
-            <input class="admin-inp" id="newCatName" placeholder="Category name (e.g. Best Dressed)">
-            <select class="admin-sel" id="newCatType">
-              <option value="solo">Solo</option>
-              <option value="duo">Duo</option>
-            </select>
-            <button class="gold-btn" onclick="addCategory()">Add</button>
-          </div>
-        </div>
-        <div class="admin-sec">
-          <div class="admin-sec-title">Manage categories</div>
-          <div id="adminCatList"></div>
-        </div>
-      </div>
-    </div>
-
-    <footer class="lda-footer">THE LAST DANCE &middot; EHL LAUSANNE &middot; 2026</footer>
-  </div>
-</div>
-
-<script>
-const PW = "laelia";
-const PHASES = [
-  {id:"nominations",label:"Nominations open"},
-  {id:"voting",label:"Voting open"},
-  {id:"top20",label:"Top 20 revealed"},
-  {id:"top10",label:"Top 10 revealed"},
-  {id:"top5",label:"Top 5 revealed"},
-  {id:"winners",label:"Winners revealed"}
-];
-
-let S = {
-  phase:"nominations",
-  categories:[
-    {id:1,name:"Best Dressed",type:"solo",nominations:[],approved:[],votes:{}},
-    {id:2,name:"Best Duo",type:"duo",nominations:[],approved:[],votes:{}}
-  ],
-  nextId:3,
-  userVotes:{},
-  userNominated:{}
-};
-
-function save(){ try{localStorage.setItem('lda_v2',JSON.stringify(S));}catch(e){} }
-function load(){ try{const d=localStorage.getItem('lda_v2');if(d)S=JSON.parse(d);}catch(e){} }
-
-function showTab(tab){
-  document.querySelectorAll('.lda-tab').forEach((t,i)=>t.classList.toggle('active',['nominate','leaderboard','admin'][i]===tab));
-  document.querySelectorAll('.lda-panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+tab).classList.add('active');
-  if(tab==='nominate')renderNominate();
-  if(tab==='leaderboard')renderLeaderboard();
-  if(tab==='admin')renderAdmin();
-}
-
-function adminLogin(){
-  if(document.getElementById('pwInput').value===PW){
-    document.getElementById('adminGate').style.display='none';
-    document.getElementById('adminBody').classList.add('open');
-    renderAdmin();
-  }else{
-    document.getElementById('pwErr').textContent='Incorrect password';
-  }
-}
-
-function setPhase(p){S.phase=p;save();renderAdmin();renderNominate();}
-
-function addCategory(){
-  const name=document.getElementById('newCatName').value.trim();
-  const type=document.getElementById('newCatType').value;
-  if(!name)return;
-  S.categories.push({id:S.nextId++,name,type,nominations:[],approved:[],votes:{}});
-  document.getElementById('newCatName').value='';
-  save();renderAdmin();
-}
-
-function deleteCategory(id){S.categories=S.categories.filter(c=>c.id!==id);save();renderAdmin();}
-
-function approveNom(catId,nom){
-  const cat=S.categories.find(c=>c.id===catId);if(!cat)return;
-  if(!cat.approved.includes(nom))cat.approved.push(nom);
-  cat.nominations=cat.nominations.filter(n=>n!==nom);
-  if(!cat.votes[nom])cat.votes[nom]=0;
-  save();renderAdmin();
-}
-
-function rejectNom(catId,nom){
-  const cat=S.categories.find(c=>c.id===catId);if(!cat)return;
-  cat.nominations=cat.nominations.filter(n=>n!==nom);
-  save();renderAdmin();
-}
-
-function submitNom(catId){
-  const cat=S.categories.find(c=>c.id===catId);if(!cat)return;
-  const v1=document.getElementById('nom_'+catId+'_1').value.trim();
-  const v2=cat.type==='duo'?document.getElementById('nom_'+catId+'_2').value.trim():null;
-  if(!v1||(cat.type==='duo'&&!v2))return;
-  const entry=cat.type==='duo'?v1+' & '+v2:v1;
-  if(!cat.nominations.includes(entry)&&!cat.approved.includes(entry))cat.nominations.push(entry);
-  S.userNominated[catId]=true;
-  document.getElementById('nom_'+catId+'_1').value='';
-  if(cat.type==='duo')document.getElementById('nom_'+catId+'_2').value='';
-  const m=document.getElementById('ok_'+catId);
-  if(m){m.textContent='Nomination submitted ❖';setTimeout(()=>m.textContent='',2500);}
-  save();
-}
-
-function selectVote(el,name){
-  document.querySelectorAll('.vote-opt').forEach(o=>{
-    if(o.querySelector('input[name="'+name+'"]')){
-      const isThis=o===el;
-      o.classList.toggle('sel',isThis);
-      const inp=o.querySelector('input[type=radio]');
-      if(inp)inp.checked=isThis;
-    }
-  });
-}
-
-function submitVote(catId){
-  const cat=S.categories.find(c=>c.id===catId);if(!cat)return;
-  const sel=document.querySelector('input[name="v_'+catId+'"]:checked');if(!sel)return;
-  const nom=sel.value;
-  const prev=S.userVotes[catId];
-  if(prev&&cat.votes[prev])cat.votes[prev]--;
-  cat.votes[nom]=(cat.votes[nom]||0)+1;
-  S.userVotes[catId]=nom;
-  const m=document.getElementById('ok_'+catId);
-  if(m){m.textContent='Vote recorded ❖';setTimeout(()=>m.textContent='',2500);}
-  save();renderNominate();
-}
-
-function getCount(){
-  const p=S.phase;
-  if(p==='top20')return 20;if(p==='top10')return 10;
-  if(p==='top5')return 5;if(p==='winners')return 1;
-  return null;
-}
-
-function esc(s){return s.replace(/\\/g,'\\\\').replace(/'/g,"\\'");}
-function escHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-
-function renderNominate(){
-  const el=document.getElementById('nominateList');
-  const banner=document.getElementById('phaseBanner');
-  const p=S.phase;
-  if(p==='nominations')banner.innerHTML='<strong>Nominations open</strong> &mdash; submit your candidates for each category';
-  else if(p==='voting')banner.innerHTML='<strong>Voting open</strong> &mdash; cast your vote for each category';
-  else banner.innerHTML='<strong>Voting closed</strong> &mdash; results will be revealed at the gala';
-  if(!S.categories.length){el.innerHTML='<div class="hidden-msg">Categories coming soon ❖</div>';return;}
-  el.innerHTML=S.categories.map(cat=>{
-    const isDuo=cat.type==='duo';
-    if(p==='nominations'){
-      const done=S.userNominated[cat.id];
-      return `<div class="cat-card">
-        <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo?'Duo':'Solo'}</div></div>
-        ${done?'<div class="ok-msg">Nomination submitted &mdash; thank you ❖</div>':
-        isDuo?`<div class="duo-col">
-          <div class="duo-inputs">
-            <input class="nom-inp" id="nom_${cat.id}_1" placeholder="First person">
-            <input class="nom-inp" id="nom_${cat.id}_2" placeholder="Second person">
-          </div>
-          <button class="gold-btn" onclick="submitNom(${cat.id})">Nominate</button>
-        </div><div class="ok-msg" id="ok_${cat.id}"></div>`:
-        `<div class="nom-row">
-          <input class="nom-inp" id="nom_${cat.id}_1" placeholder="Full name" onkeydown="if(event.key==='Enter')submitNom(${cat.id})">
-          <button class="gold-btn" onclick="submitNom(${cat.id})">Nominate</button>
-        </div><div class="ok-msg" id="ok_${cat.id}"></div>`}
-      </div>`;
-    }else if(p==='voting'){
-      const app=cat.approved;
-      if(!app.length)return `<div class="cat-card"><div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo?'Duo':'Solo'}</div></div><div class="empty-note" style="margin-top:6px">Nominees being confirmed &mdash; check back soon</div></div>`;
-      const uv=S.userVotes[cat.id];
-      return `<div class="cat-card">
-        <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo?'Duo':'Solo'}</div></div>
-        <div class="vote-list">${app.map(nom=>`
-          <div class="vote-opt${uv===nom?' sel':''}" onclick="selectVote(this,'v_${cat.id}')">
-            <div class="vote-radio"><div class="vote-dot"></div></div>
-            <input type="radio" name="v_${cat.id}" value="${escHtml(nom)}" style="display:none"${uv===nom?' checked':''}>
-            <div class="vote-name">${escHtml(nom)}</div>
-          </div>`).join('')}
-        </div>
-        <button class="outline-btn" onclick="submitVote(${cat.id})">${uv?'Update vote':'Cast vote'}</button>
-        <div class="ok-msg" id="ok_${cat.id}"></div>
-      </div>`;
-    }else{
-      return `<div class="cat-card"><div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo?'Duo':'Solo'}</div></div><div class="hidden-msg" style="padding:1rem 0">Results will be revealed at The Last Dance Gala ❖</div></div>`;
-    }
-  }).join('');
-}
-
-function renderLeaderboard(){
-  const el=document.getElementById('leaderboardContent');
-  const count=getCount();
-  if(!count){el.innerHTML='<div class="hidden-msg">The leaderboard will be revealed at select events throughout the semester ❖<br><br><span style="font-size:12px;letter-spacing:0.1em;font-family:inherit">Stay tuned</span></div>';return;}
-  if(!S.categories.length){el.innerHTML='<div class="hidden-msg">No categories yet</div>';return;}
-  el.innerHTML=S.categories.map(cat=>{
-    const sorted=[...cat.approved].sort((a,b)=>(cat.votes[b]||0)-(cat.votes[a]||0)).slice(0,count);
-    const max=sorted.length?(cat.votes[sorted[0]]||1):1;
-    const label=count===1?'Winner':`Top ${Math.min(count,sorted.length)}`;
-    return `<div class="lb-cat">
-      <div class="lb-cat-name">${escHtml(cat.name)}</div>
-      <div class="lb-phase">${label} &middot; ${cat.type==='duo'?'Duo':'Solo'}</div>
-      ${!sorted.length?'<div class="empty-note">No nominees yet</div>':sorted.map((nom,i)=>`
-        <div class="lb-entry${i===0?' top':''}">
-          <div class="lb-rank">${i+1}</div>
-          <div class="lb-name">${escHtml(nom)}</div>
-          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round(((cat.votes[nom]||0)/max)*100)}%"></div></div>
-          <div class="lb-votes">${cat.votes[nom]||0}</div>
-        </div>`).join('')}
-    </div>`;
-  }).join('');
-}
-
-function renderAdmin(){
-  const pb=document.getElementById('phaseBtns');
-  if(pb)pb.innerHTML=PHASES.map(p=>`<button class="phase-btn${S.phase===p.id?' active':''}" onclick="setPhase('${p.id}')">${p.label}</button>`).join('');
-  const list=document.getElementById('adminCatList');
-  if(!list)return;
-  if(!S.categories.length){list.innerHTML='<div class="empty-note">No categories yet &mdash; add one above</div>';return;}
-  list.innerHTML=S.categories.map(cat=>{
-    const pend=cat.nominations||[];
-    const appr=cat.approved||[];
-    return `<div class="admin-cat-item">
-      <div class="admin-cat-hd">
-        <div class="admin-cat-name">${escHtml(cat.name)} <span style="font-size:11px;color:#5a5040">(${cat.type})</span></div>
-        <button class="del-btn" onclick="deleteCategory(${cat.id})">Delete</button>
-      </div>
-      ${pend.length?`<div class="sec-label">Pending nominations</div><div class="nom-tags">${pend.map(n=>`<div class="nom-tag">${escHtml(n)}<button class="tag-approve" onclick="approveNom(${cat.id},'${esc(n)}')">&#10003;</button><button class="tag-reject" onclick="rejectNom(${cat.id},'${esc(n)}')">&#10005;</button></div>`).join('')}</div>`:''}
-      ${appr.length?`<div class="sec-label" style="${pend.length?'margin-top:8px':''}">Approved nominees</div><div class="nom-tags">${appr.map(n=>`<span class="approved-tag">${escHtml(n)}</span>`).join('')}</div>`:''}
-      ${!pend.length&&!appr.length?'<div class="empty-note">No nominations yet</div>':''}
-    </div>`;
-  }).join('');
-}
-
-load();
-renderNominate();
-</script>
-</body>
-</html>
+          <input
