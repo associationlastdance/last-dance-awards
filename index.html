@@ -412,9 +412,23 @@ async function submitNom(catId) {
   const btn = document.querySelector('[data-nom-btn="' + catId + '"]');
   if (btn) btn.disabled = true;
 
-  const { data, error } = await sb.from('nominations').insert({category_id: catId, name, status: 'pending'}).select().single();
-  if (!error && data) {
-    nominations.push({...data, voteCount: 0});
+  // Check if this name already exists in this category (case-insensitive)
+  const nameLower = name.toLowerCase();
+  const existing = nominations.find(n => n.category_id === catId && n.name.toLowerCase() === nameLower);
+
+  let success = false;
+  if (existing) {
+    // Already nominated — increment nomination_count
+    const newCount = (existing.nomination_count || 1) + 1;
+    const { error } = await sb.from('nominations').update({ nomination_count: newCount }).eq('id', existing.id);
+    if (!error) { existing.nomination_count = newCount; success = true; }
+  } else {
+    // New nomination
+    const { data, error } = await sb.from('nominations').insert({category_id: catId, name, status: 'pending', nomination_count: 1}).select().single();
+    if (!error && data) { nominations.push({...data, voteCount: 0}); success = true; }
+  }
+
+  if (success) {
     userNominated[catId] = true;
     saveNominated();
     document.getElementById('nom_' + catId + '_1').value = '';
@@ -650,7 +664,7 @@ function renderAdmin() {
         <button class="del-btn" onclick="deleteCategory(${cat.id})">Delete</button>
       </div>
       ${pend.length ? `<div class="sec-label">Pending nominations</div><div class="nom-tags">${pend.map(n => `<div class="nom-tag">${escHtml(n.name)}<button class="tag-approve" onclick="approveNom(${n.id})">&#10003;</button><button class="tag-reject" onclick="rejectNom(${n.id})">&#10005;</button></div>`).join('')}</div>` : ''}
-      ${appr.length ? `<div class="sec-label" style="${pend.length ? 'margin-top:8px' : ''}">Approved nominees</div><div class="nom-tags">${appr.map(n => `<span class="approved-tag">${escHtml(n.name)} <span style="color:#c9a84c">${n.voteCount}</span></span>`).join('')}</div>` : ''}
+      ${appr.length ? `<div class="sec-label" style="${pend.length ? 'margin-top:8px' : ''}">Approved nominees</div><div class="nom-tags">${appr.map(n => `<div class="nom-tag">${escHtml(n.name)} <span style="color:#c9a84c" title="votes">${n.voteCount}v</span>${n.nomination_count > 1 ? ` <span style="color:#8a8070" title="nominations">${n.nomination_count}n</span>` : ''}<button class="tag-reject" onclick="rejectNom(${n.id})">&#10005;</button></div>`).join('')}</div>` : ''}
       ${!pend.length && !appr.length ? '<div class="empty-note">No nominations yet</div>' : ''}
     </div>`;
   }).join('');
