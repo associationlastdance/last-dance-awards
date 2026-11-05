@@ -126,6 +126,12 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .voter-chip:hover { border-color: rgba(226,75,74,0.4); color: #e24b4a; }
 .voter-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: #c9a84c; }
 
+/* Searchable dropdown */
+.dd-wrap { position: relative; flex: 1; }
+.dd-list { position: absolute; top: calc(100% + 4px); left: 0; right: 0; background: #1a1a1a; border: 0.5px solid rgba(201,168,76,0.3); border-radius: 6px; z-index: 20; max-height: 220px; overflow-y: auto; }
+.dd-item { padding: 9px 12px; font-size: 13px; color: #e8e0d0; cursor: pointer; transition: background 0.1s; }
+.dd-item:hover { background: rgba(201,168,76,0.09); color: #faf7f2; }
+
 @media (max-width: 480px) {
   .lda-title { font-size: 26px; }
   .duo-inputs { flex-direction: column; }
@@ -231,16 +237,17 @@ const SUPABASE_URL = 'https://jpccjxqpwtyqfzvhanjg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwY2NqeHFwd3R5cWZ6dmhhbmpnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyOTYzNDMsImV4cCI6MjEwNjg3MjM0M30.mmVF0kiWxUAq-8JyPXH7h3k3l98mZzNJ3BZ0Iz-bzN0';
 const PW = "laelia";
 const PHASES = [
-  {id:"nominations",label:"Nominations open"},
-  {id:"voting",label:"Voting open"},
-  {id:"top20",label:"Top 20 revealed"},
-  {id:"top10",label:"Top 10 revealed"},
-  {id:"top5",label:"Top 5 revealed"},
-  {id:"winners",label:"Winners revealed"}
+  {id:"nominations",    label:"Nominations open"},
+  {id:"top10_revealed", label:"Top 10 revealed"},
+  {id:"top10_vote",     label:"Vote — Top 10"},
+  {id:"top3_revealed",  label:"Top 3 revealed"},
+  {id:"top3_vote",      label:"Vote — Top 3"},
+  {id:"winners",        label:"Winners revealed"}
 ];
 
 // Allowed voters — lowercase for case-insensitive matching
-const ALLOWED_EMAILS = new Set(["abraham.faas@ehl.ch","adrien.fourdan@ehl.ch","agathe.cottet@ehl.ch","agnesa.hani@ehl.ch","ahmed.sentissielidrissi@ehl.ch","aitenir.akaev@ehl.ch","alain.tissot@ehl.ch","alan.rashidian@ehl.ch","alban.delespaul@ehl.ch","alexander.schroder@ehl.ch","alexandra.perren@ehl.ch","alexandra.ruze@ehl.ch","alexandra.vanepps@ehl.ch","alexis.freymond@ehl.ch","alexis.salsali@ehl.ch","ali.alkhraif@ehl.ch","alice.cremona@ehl.ch","alina.lythgoe@ehl.ch","alixe.rivollet@ehl.ch","aliya.mokart@ehl.ch","alizelune.varilek@ehl.ch","amaury.claeys@ehl.ch","amelie.gerecke@ehl.ch","amelie.niedrausvoboda@ehl.ch","amelie.stiebleichinger@ehl.ch","amr.baroudy@ehl.ch","ana.plettner@ehl.ch","ana.reyolmos@ehl.ch","andrea.guillaumin@ehl.ch","andreanne.lecoultre@ehl.ch","angela.ziliotto@ehl.ch","anika.amweg@ehl.ch","anna.parakian@ehl.ch","annabel.herrmann@ehl.ch","annemijn.tijsterman@ehl.ch","arnaud.thirion@ehl.ch","arthur.ribordy@ehl.ch","aryavir.arora@ehl.ch","athena.yiu@ehl.ch","augustin.lescure@ehl.ch","aurelien.schneuwly@ehl.ch","aurelio.vonsalis@ehl.ch","aurore.mottier@ehl.ch","aya.lum@ehl.ch","ayden.lam@ehl.ch","aymeric.morin@ehl.ch","ayushi.dugar@ehl.ch","azhar.alwosaibi@ehl.ch","balthazar.debacker-currimjee@ehl.ch","barbara.reale@ehl.ch","basile.duhoux@ehl.ch","benjamin.lachmannpuccini@ehl.ch","bilel.mahfoudh@ehl.ch","blanca.estrada@ehl.ch","bruno.studach@ehl.ch","camila.choux@ehl.ch","camille.benezet@ehl.ch","carola.cattaneo@ehl.ch","chahin.klouche@ehl.ch","channisa.phe@ehl.ch","charleerose.flaction@ehl.ch","charlene.wong@ehl.ch","charlotte.dorier@ehl.ch","charlotte.hannak@ehl.ch","chengwei.li@ehl.ch","chenyi.xu@ehl.ch","chenyue.bian@ehl.ch","chiara.guggisberg@ehl.ch","chloe.janssen@ehl.ch","clara.chevalier@ehl.ch","clarissa.baur@ehl.ch","claudio.hotz@ehl.ch","clementine.aliyev-driay@ehl.ch","clementine.jacquot@ehl.ch","colin.rieffel@ehl.ch","corentin.dautheville@ehl.ch","corentin.valette@ehl.ch","cyprien.otto@ehl.ch","cyrus.deboisseson@ehl.ch","dan.bernheim@ehl.ch","daniel.layani@ehl.ch","daniel.radin@ehl.ch","daniela.ozant@ehl.ch","daniela.poupascual@ehl.ch","dennis.deboer@ehl.ch","diego.baretta@ehl.ch","donghoon.kim@ehl.ch","ekaterina.rozova@ehl.ch","elisabeth.thimmesch@ehl.ch","ella.zlotkin@ehl.ch","emilia.grutzediek@ehl.ch","emma.bennaim@ehl.ch","emma.wittwer@ehl.ch","emmeline.johnson@ehl.ch","emre.mumcuoglu@ehl.ch","eric.ortiz@ehl.ch","erik.hanker@ehl.ch","estella.kallinikou@ehl.ch","estelle.savioz@ehl.ch","eszterchristelle.lukacs@ehl.ch","ethel.bracka@ehl.ch","etienne.camandona@ehl.ch","faustine.lafont@ehl.ch","federico.tomasini@ehl.ch","felix.grobet@ehl.ch","felix.pollet@ehl.ch","filippo.righini@ehl.ch","finn.hottinger@ehl.ch","frederick.schnapka@ehl.ch","fritz.hosie@ehl.ch","gabriele.borla@ehl.ch","gabrielle.delambilly@ehl.ch","georgios.daktylidis@ehl.ch","ghzal.alyafie@ehl.ch","gian-rino.uvira@ehl.ch","gilles.fassbind@ehl.ch","ginevra.duetschler@ehl.ch","glycel.lamparsky@ehl.ch","hanyun.ma@ehl.ch","hoiteng.leong@ehl.ch","hugo.ljunggren@ehl.ch","ilan.vanleeuwen@ehl.ch","ilenia.leroux@ehl.ch","ilian.meier@ehl.ch","ines.milon@ehl.ch","inja.marcic@ehl.ch","ivana.canal-vidovic@ehl.ch","iyoela.corbin@ehl.ch","jacopo.scornaienghi@ehl.ch","jacqueline.racovita@ehl.ch","jakob.laan@ehl.ch","janick.sutter@ehl.ch","jasen.milenovtodorov@ehl.ch","jaswanthikka.arun@ehl.ch","javier.alabanza@ehl.ch","jean-baptiste.chabre@ehl.ch","jeremy.albouhairgalache@ehl.ch","jeremy.waldburger@ehl.ch","jiliansophia.lamont@ehl.ch","jinjing.du@ehl.ch","jiuyi.shao@ehl.ch","joaquin.duenas@ehl.ch","joel.layani@ehl.ch","john.mcgrath@ehl.ch","john.woo@ehl.ch","jongha.baik@ehl.ch","jordi.schmidt@ehl.ch","jose.almeida@ehl.ch","joseph-selim.gennaoui@ehl.ch","josephine.bourgeois@ehl.ch","joshua.tang@ehl.ch","joshua.wrobel@ehl.ch","joy.dario@ehl.ch","juliette.bourret@ehl.ch","juliette.parent@ehl.ch","jumpei.hori@ehl.ch","jurriaan.hamel@ehl.ch","kamilla.subanova@ehl.ch","katie.shaw@ehl.ch","krisheenkaur.sethi@ehl.ch","lara.puetzer@ehl.ch","lars.nagelin@ehl.ch","laura.arayalopez@ehl.ch","laura.carriere@ehl.ch","laura.echenard@ehl.ch","laura.villanueva@ehl.ch","lea.carpentier@ehl.ch","lea.wyss@ehl.ch","leandro.dobrinov@ehl.ch","leif.hakanson@ehl.ch","leihan.xu@ehl.ch","leo.birenbaum-haligua@ehl.ch","leo.corsten@ehl.ch","leo.garin@ehl.ch","leo.murer@ehl.ch","leo.scrucca@ehl.ch","leon.kuehne@ehl.ch","leonardo.renteria@ehl.ch","lia.gorella@ehl.ch","lila-rose.cheyrou@ehl.ch","lili.finck@ehl.ch","lilia.alami@ehl.ch","lilli-may.brunetti@ehl.ch","lily.mcloughlin@ehl.ch","linda.lyu@ehl.ch","linfei.hua@ehl.ch","lisa.antoniazza@ehl.ch","lisa.bertherin@ehl.ch","loic.oddin@ehl.ch","lorenz.leuenberger@ehl.ch","lou.jara@ehl.ch","louis.favre@ehl.ch","louna.cohen@ehl.ch","luca.barboni@ehl.ch","lucas.binkert@ehl.ch","lucia.augustinoy@ehl.ch","lucien.michel@ehl.ch","ludovic.vonledersteger-falkenegg@ehl.ch","luka.alon@ehl.ch","luna.bleuel@ehl.ch","mae.glenisson@ehl.ch","magali.schulte@ehl.ch","mahe.mauduech@ehl.ch","malo.douville@ehl.ch","manon.chaumet@ehl.ch","margaux.bouhanna@ehl.ch","margaux.pages-chartier@ehl.ch","marguerite.guislain@ehl.ch","maria.dania@ehl.ch","maria.mehana@ehl.ch","marie-rose.boscq@ehl.ch","marie.bacchetta@ehl.ch","mariefleur.demole@ehl.ch","mariia.polishchuk@ehl.ch","marion.salato@ehl.ch","martine.debons@ehl.ch","mary.ly@ehl.ch","mateo.bagnoud@ehl.ch","mathieu.debons@ehl.ch","mathilde.abdelatif@ehl.ch","matthew.tombaugh@ehl.ch","matthieu.mercier@ehl.ch","matvey.vasilyev@ehl.ch","maxence.ehrler@ehl.ch","maxim.jilinski@ehl.ch","maxime.randoux@ehl.ch","maximilian.hamm@ehl.ch","maya.kharisova@ehl.ch","melina.gyalistras@ehl.ch","mia.beauverd@ehl.ch","mia.markovic@ehl.ch","mihika.khandelwal@ehl.ch","mikhail.krylov@ehl.ch","milla.malzer@ehl.ch","mirsadi.mirhadiyev@ehl.ch","mohamad.elsidani@ehl.ch","mohammadsadra.emadi@ehl.ch","montana.witschi@ehl.ch","namgeu.yook@ehl.ch","natalia.fivaz@ehl.ch","nelson.wagner@ehl.ch","nicolai.macdonald@ehl.ch","nicolas.allet@ehl.ch","nikita.novelle@ehl.ch","ninon.cuiller@ehl.ch","noah.hale@ehl.ch","noelle.mueller@ehl.ch","noor.dekock@ehl.ch","noram.nguyen@ehl.ch","olivia.baledent@ehl.ch","olivier.olaerts@ehl.ch","oxana.kutter@ehl.ch","ozan.buyrukcan@ehl.ch","p.denanteuil@ehl.ch","pablo.lindner@ehl.ch","patricia.scherrer@ehl.ch","paul-henry.blanc@ehl.ch","paul.bellefleur@ehl.ch","paulina.loose@ehl.ch","pauline.bernard@ehl.ch","pauline.bertschmann@ehl.ch","petra.balerna@ehl.ch","pierre-jean.penas@ehl.ch","qingyi.wang@ehl.ch","quirin.schneider@ehl.ch","rafael.cespedes@ehl.ch","rafael.gehy@ehl.ch","renad.alsaeed@ehl.ch","riccardo.baroni@ehl.ch","rishaya.dass@ehl.ch","rodrigo.monteroquispe@ehl.ch","romain.merz@ehl.ch","romane.wendling@ehl.ch","ruonan.chen@ehl.ch","sally.utzinger@ehl.ch","sandra.rodriguezpenabad@ehl.ch","sarah.lutz@ehl.ch","sherine.jordan@ehl.ch","sheung-yin.kan@ehl.ch","shinwoo.kim@ehl.ch","sijing.li@ehl.ch","siyao.zhang@ehl.ch","siyi.zhang@ehl.ch","sofia.ecca@ehl.ch","sophia.hendos@ehl.ch","sophie.mironov@ehl.ch","stella.guerber@ehl.ch","stella.neeser@ehl.ch","suluzhan.mukshayeva@ehl.ch","szymon.zawislak@ehl.ch","taniya.joseph@ehl.ch","teresa.meuthen@ehl.ch","teseo.toschi@ehl.ch","tess.bouvier@ehl.ch","thiani.menschel@ehl.ch","thomas.delf@ehl.ch","tiago.anselme@ehl.ch","tiago.janet@ehl.ch","timo.tanner@ehl.ch","tom.satin@ehl.ch","tyler.cowan@ehl.ch","valentine.berthoumieux@ehl.ch","valentine.dorier@ehl.ch","valentine.estier@ehl.ch","valentine.rouviere@ehl.ch","valeriejiayi.chen@ehl.ch","valmont.blaton@ehl.ch","viacheslav.naumchak@ehl.ch","victor.troillet@ehl.ch","victoria.lanig@ehl.ch","victoria.rappange@ehl.ch","vietanh.luong@ehl.ch","violeta.cisnerosgonzalez@ehl.ch","violette.ivangine@ehl.ch","virginia.beretta@ehl.ch","virginie.russo@ehl.ch","wassal.gari@ehl.ch","wenxin.cong@ehl.ch","wera.karl@ehl.ch","weronika.sliwinska@ehl.ch","xavier.hamoir@ehl.ch","xiaoyi.wang@ehl.ch","xingtong.gu@ehl.ch","yann.leguerer@ehl.ch","yinmoe.aye@ehl.ch","yishan.tian@ehl.ch","youngjae.chun@ehl.ch","yujie.zhou@ehl.ch","yun-chen.cheng@ehl.ch","yury.bulatov@ehl.ch","zamira.tairova@ehl.ch","zhaoying.jiang@ehl.ch","zhengyuan.shi@ehl.ch","zhichen.jiang@ehl.ch","zhijie.zhu@ehl.ch","ziheng.lin@ehl.ch","zijian.li@ehl.ch","ziyan.fang@ehl.ch","ziyue.cai@ehl.ch","zoe.lagutaine@ehl.ch","laelia.sancho@ehl.ch"]);
+const ALLOWED_EMAILS = new Set(["abraham.faas@ehl.ch","adrien.fourdan@ehl.ch","agathe.cottet@ehl.ch","agnesa.hani@ehl.ch","ahmed.sentissielidrissi@ehl.ch","aitenir.akaev@ehl.ch","alain.tissot@ehl.ch","alan.rashidian@ehl.ch","alban.delespaul@ehl.ch","alexander.schroder@ehl.ch","alexandra.perren@ehl.ch","alexandra.ruze@ehl.ch","alexandra.vanepps@ehl.ch","alexis.freymond@ehl.ch","alexis.salsali@ehl.ch","ali.alkhraif@ehl.ch","alice.cremona@ehl.ch","alina.lythgoe@ehl.ch","alixe.rivollet@ehl.ch","aliya.mokart@ehl.ch","alizelune.varilek@ehl.ch","amaury.claeys@ehl.ch","amelie.gerecke@ehl.ch","amelie.niedrausvoboda@ehl.ch","amelie.stiebleichinger@ehl.ch","amr.baroudy@ehl.ch","ana.plettner@ehl.ch","ana.reyolmos@ehl.ch","andrea.guillaumin@ehl.ch","andreanne.lecoultre@ehl.ch","angela.ziliotto@ehl.ch","anika.amweg@ehl.ch","anna.parakian@ehl.ch","annabel.herrmann@ehl.ch","annemijn.tijsterman@ehl.ch","arnaud.thirion@ehl.ch","arthur.ribordy@ehl.ch","aryavir.arora@ehl.ch","athena.yiu@ehl.ch","augustin.lescure@ehl.ch","aurelien.schneuwly@ehl.ch","aurelio.vonsalis@ehl.ch","aurore.mottier@ehl.ch","aya.lum@ehl.ch","ayden.lam@ehl.ch","aymeric.morin@ehl.ch","ayushi.dugar@ehl.ch","azhar.alwosaibi@ehl.ch","balthazar.debacker-currimjee@ehl.ch","barbara.reale@ehl.ch","basile.duhoux@ehl.ch","benjamin.lachmannpuccini@ehl.ch","bilel.mahfoudh@ehl.ch","blanca.estrada@ehl.ch","bruno.studach@ehl.ch","camila.choux@ehl.ch","camille.benezet@ehl.ch","carola.cattaneo@ehl.ch","chahin.klouche@ehl.ch","channisa.phe@ehl.ch","charleerose.flaction@ehl.ch","charlene.wong@ehl.ch","charlotte.dorier@ehl.ch","charlotte.hannak@ehl.ch","chengwei.li@ehl.ch","chenyi.xu@ehl.ch","chenyue.bian@ehl.ch","chiara.guggisberg@ehl.ch","chloe.janssen@ehl.ch","clara.chevalier@ehl.ch","clarissa.baur@ehl.ch","clarissa.chan@ehl.ch","claudio.hotz@ehl.ch","clementine.aliyev-driay@ehl.ch","clementine.jacquot@ehl.ch","colin.rieffel@ehl.ch","corentin.dautheville@ehl.ch","corentin.valette@ehl.ch","cyprien.otto@ehl.ch","cyrus.deboisseson@ehl.ch","dan.bernheim@ehl.ch","daniel.layani@ehl.ch","daniel.radin@ehl.ch","daniela.ozant@ehl.ch","daniela.poupascual@ehl.ch","dennis.deboer@ehl.ch","diego.baretta@ehl.ch","donghoon.kim@ehl.ch","ekaterina.rozova@ehl.ch","elisabeth.thimmesch@ehl.ch","ella.zlotkin@ehl.ch","emilia.grutzediek@ehl.ch","emma.bennaim@ehl.ch","emma.wittwer@ehl.ch","emmeline.johnson@ehl.ch","emre.mumcuoglu@ehl.ch","eric.ortiz@ehl.ch","erik.hanker@ehl.ch","estella.kallinikou@ehl.ch","estelle.savioz@ehl.ch","eszterchristelle.lukacs@ehl.ch","ethel.bracka@ehl.ch","etienne.camandona@ehl.ch","faustine.lafont@ehl.ch","federico.tomasini@ehl.ch","felix.grobet@ehl.ch","felix.pollet@ehl.ch","filippo.righini@ehl.ch","finn.hottinger@ehl.ch","frederick.schnapka@ehl.ch","fritz.hosie@ehl.ch","gabriele.borla@ehl.ch","gabrielle.delambilly@ehl.ch","georgios.daktylidis@ehl.ch","ghzal.alyafie@ehl.ch","gian-rino.uvira@ehl.ch","gilles.fassbind@ehl.ch","ginevra.duetschler@ehl.ch","glycel.lamparsky@ehl.ch","hanyun.ma@ehl.ch","hoiteng.leong@ehl.ch","hugo.ljunggren@ehl.ch","ilan.vanleeuwen@ehl.ch","ilenia.leroux@ehl.ch","ilian.meier@ehl.ch","ines.milon@ehl.ch","inja.marcic@ehl.ch","ivana.canal-vidovic@ehl.ch","iyoela.corbin@ehl.ch","jacopo.scornaienghi@ehl.ch","jacqueline.racovita@ehl.ch","jakob.laan@ehl.ch","janick.sutter@ehl.ch","jasen.milenovtodorov@ehl.ch","jaswanthikka.arun@ehl.ch","javier.alabanza@ehl.ch","jean-baptiste.chabre@ehl.ch","jeremy.albouhairgalache@ehl.ch","jeremy.waldburger@ehl.ch","jiliansophia.lamont@ehl.ch","jinjing.du@ehl.ch","jiuyi.shao@ehl.ch","joaquin.duenas@ehl.ch","joel.layani@ehl.ch","john.mcgrath@ehl.ch","john.woo@ehl.ch","jongha.baik@ehl.ch","jordi.schmidt@ehl.ch","jose.almeida@ehl.ch","joseph-selim.gennaoui@ehl.ch","josephine.bourgeois@ehl.ch","joshua.tang@ehl.ch","joshua.wrobel@ehl.ch","joy.dario@ehl.ch","juliette.bourret@ehl.ch","juliette.parent@ehl.ch","jumpei.hori@ehl.ch","jurriaan.hamel@ehl.ch","kamilla.subanova@ehl.ch","katie.shaw@ehl.ch","krisheenkaur.sethi@ehl.ch","lara.puetzer@ehl.ch","lars.nagelin@ehl.ch","laura.arayalopez@ehl.ch","laura.carriere@ehl.ch","laura.echenard@ehl.ch","laura.villanueva@ehl.ch","lea.carpentier@ehl.ch","lea.wyss@ehl.ch","leandro.dobrinov@ehl.ch","leif.hakanson@ehl.ch","leihan.xu@ehl.ch","leo.birenbaum-haligua@ehl.ch","leo.corsten@ehl.ch","leo.garin@ehl.ch","leo.murer@ehl.ch","leo.scrucca@ehl.ch","leon.kuehne@ehl.ch","leonardo.renteria@ehl.ch","lia.gorella@ehl.ch","lila-rose.cheyrou@ehl.ch","lili.finck@ehl.ch","lilia.alami@ehl.ch","lilli-may.brunetti@ehl.ch","lily.mcloughlin@ehl.ch","linda.lyu@ehl.ch","linfei.hua@ehl.ch","lisa.antoniazza@ehl.ch","lisa.bertherin@ehl.ch","loic.oddin@ehl.ch","lorenz.leuenberger@ehl.ch","lou.jara@ehl.ch","louis.favre@ehl.ch","louna.cohen@ehl.ch","luca.barboni@ehl.ch","lucas.binkert@ehl.ch","lucia.augustinoy@ehl.ch","lucien.michel@ehl.ch","ludovic.vonledersteger-falkenegg@ehl.ch","luka.alon@ehl.ch","luna.bleuel@ehl.ch","mae.glenisson@ehl.ch","magali.schulte@ehl.ch","mahe.mauduech@ehl.ch","malo.douville@ehl.ch","manon.chaumet@ehl.ch","margaux.bouhanna@ehl.ch","margaux.pages-chartier@ehl.ch","marguerite.guislain@ehl.ch","maria.dania@ehl.ch","maria.mehana@ehl.ch","marie-rose.boscq@ehl.ch","marie.bacchetta@ehl.ch","mariefleur.demole@ehl.ch","mariia.polishchuk@ehl.ch","marion.salato@ehl.ch","martine.debons@ehl.ch","mary.ly@ehl.ch","mateo.bagnoud@ehl.ch","mathieu.debons@ehl.ch","mathilde.abdelatif@ehl.ch","matthew.tombaugh@ehl.ch","matthieu.mercier@ehl.ch","matvey.vasilyev@ehl.ch","maxence.ehrler@ehl.ch","maxim.jilinski@ehl.ch","maxime.randoux@ehl.ch","maximilian.hamm@ehl.ch","maya.kharisova@ehl.ch","melina.gyalistras@ehl.ch","mia.beauverd@ehl.ch","mia.markovic@ehl.ch","mihika.khandelwal@ehl.ch","mikhail.krylov@ehl.ch","milla.malzer@ehl.ch","mirsadi.mirhadiyev@ehl.ch","mohamad.elsidani@ehl.ch","mohammadsadra.emadi@ehl.ch","montana.witschi@ehl.ch","namgeu.yook@ehl.ch","natalia.fivaz@ehl.ch","nelson.wagner@ehl.ch","nicolai.macdonald@ehl.ch","nicolas.allet@ehl.ch","nikita.novelle@ehl.ch","ninon.cuiller@ehl.ch","noah.hale@ehl.ch","noelle.mueller@ehl.ch","noor.dekock@ehl.ch","noram.nguyen@ehl.ch","olivia.baledent@ehl.ch","olivier.olaerts@ehl.ch","oxana.kutter@ehl.ch","ozan.buyrukcan@ehl.ch","p.denanteuil@ehl.ch","pablo.lindner@ehl.ch","patricia.scherrer@ehl.ch","paul-henry.blanc@ehl.ch","paul.bellefleur@ehl.ch","paulina.loose@ehl.ch","pauline.bernard@ehl.ch","pauline.bertschmann@ehl.ch","petra.balerna@ehl.ch","pierre-jean.penas@ehl.ch","qingyi.wang@ehl.ch","quirin.schneider@ehl.ch","rafael.cespedes@ehl.ch","rafael.gehy@ehl.ch","renad.alsaeed@ehl.ch","riccardo.baroni@ehl.ch","rishaya.dass@ehl.ch","rodrigo.monteroquispe@ehl.ch","romain.merz@ehl.ch","romane.wendling@ehl.ch","ruonan.chen@ehl.ch","sally.utzinger@ehl.ch","sandra.rodriguezpenabad@ehl.ch","sarah.lutz@ehl.ch","sherine.jordan@ehl.ch","sheung-yin.kan@ehl.ch","shinwoo.kim@ehl.ch","sijing.li@ehl.ch","siyao.zhang@ehl.ch","siyi.zhang@ehl.ch","sofia.ecca@ehl.ch","sophia.hendos@ehl.ch","sophie.mironov@ehl.ch","stella.guerber@ehl.ch","stella.neeser@ehl.ch","suluzhan.mukshayeva@ehl.ch","szymon.zawislak@ehl.ch","taniya.joseph@ehl.ch","teresa.meuthen@ehl.ch","teseo.toschi@ehl.ch","tess.bouvier@ehl.ch","thiani.menschel@ehl.ch","thomas.delf@ehl.ch","tiago.anselme@ehl.ch","tiago.janet@ehl.ch","timo.tanner@ehl.ch","tom.satin@ehl.ch","tyler.cowan@ehl.ch","valentine.berthoumieux@ehl.ch","valentine.dorier@ehl.ch","valentine.estier@ehl.ch","valentine.rouviere@ehl.ch","valeriejiayi.chen@ehl.ch","valmont.blaton@ehl.ch","viacheslav.naumchak@ehl.ch","victor.troillet@ehl.ch","victoria.lanig@ehl.ch","victoria.rappange@ehl.ch","vietanh.luong@ehl.ch","violeta.cisnerosgonzalez@ehl.ch","violette.ivangine@ehl.ch","virginia.beretta@ehl.ch","virginie.russo@ehl.ch","wassal.gari@ehl.ch","wenxin.cong@ehl.ch","wera.karl@ehl.ch","weronika.sliwinska@ehl.ch","xavier.hamoir@ehl.ch","xiaoyi.wang@ehl.ch","xingtong.gu@ehl.ch","yann.leguerer@ehl.ch","yinmoe.aye@ehl.ch","yishan.tian@ehl.ch","youngjae.chun@ehl.ch","yujie.zhou@ehl.ch","yun-chen.cheng@ehl.ch","yury.bulatov@ehl.ch","zamira.tairova@ehl.ch","zhaoying.jiang@ehl.ch","zhengyuan.shi@ehl.ch","zhichen.jiang@ehl.ch","zhijie.zhu@ehl.ch","ziheng.lin@ehl.ch","zijian.li@ehl.ch","ziyan.fang@ehl.ch","ziyue.cai@ehl.ch","zoe.lagutaine@ehl.ch"]);
+
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentVoterEmail = null;
@@ -291,7 +298,6 @@ async function signIn(email) {
 function signOut() {
   if (!confirm('Sign out?')) return;
   localStorage.removeItem('lda_voter_email');
-  localStorage.removeItem('lda_nominated');
   currentVoterEmail = null;
   document.getElementById('emailInput').value = '';
   document.getElementById('emailErr').textContent = '';
@@ -466,11 +472,44 @@ function selectVote(el, catId) {
 
 function getCount() {
   const p = currentPhase;
-  if (p === 'top20') return 20;
-  if (p === 'top10') return 10;
-  if (p === 'top5') return 5;
+  if (p === 'top10_revealed' || p === 'top10_vote') return 10;
+  if (p === 'top3_revealed'  || p === 'top3_vote')  return 3;
   if (p === 'winners') return 1;
   return null;
+}
+
+const VOTER_NAMES = Array.from(ALLOWED_EMAILS).map(email => {
+  const parts = email.split('@')[0].split('.');
+  const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const first = cap(parts[0].split('-').map(cap).join('-'));
+  const last  = parts.slice(1).map(cap).join(' ');
+  return { label: `${first} ${last}`, email };
+}).sort((a, b) => a.label.localeCompare(b.label));
+
+function buildDropdown(inputId, listId, onSelect) {
+  const inp = document.getElementById(inputId);
+  const lst = document.getElementById(listId);
+  if (!inp || !lst) return;
+  inp.addEventListener('input', () => {
+    const q = inp.value.trim().toLowerCase();
+    if (!q) { lst.hidden = true; return; }
+    const matches = VOTER_NAMES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 8);
+    if (!matches.length) { lst.hidden = true; return; }
+    lst.innerHTML = matches.map(n =>
+      `<div class="dd-item" onmousedown="event.preventDefault()" onclick="selectDd('${inputId}','${listId}',${JSON.stringify(n.label)})">
+        ${escHtml(n.label)}
+      </div>`
+    ).join('');
+    lst.hidden = false;
+  });
+  inp.addEventListener('blur', () => { setTimeout(() => { lst.hidden = true; }, 150); });
+}
+
+function selectDd(inputId, listId, label) {
+  const inp = document.getElementById(inputId);
+  if (inp) inp.value = label;
+  const lst = document.getElementById(listId);
+  if (lst) lst.hidden = true;
 }
 
 function renderNominate() {
@@ -478,9 +517,12 @@ function renderNominate() {
   const banner = document.getElementById('phaseBanner');
   const p = currentPhase;
 
-  if (p === 'nominations') banner.innerHTML = '<strong>Nominations open</strong> &mdash; submit your candidates for each category';
-  else if (p === 'voting') banner.innerHTML = '<strong>Voting open</strong> &mdash; cast your vote for each category';
-  else banner.innerHTML = '<strong>Voting closed</strong> &mdash; results will be revealed at the gala';
+  if (p === 'nominations')    banner.innerHTML = '<strong>Nominations open</strong> &mdash; submit your candidates for each category';
+  else if (p === 'top10_revealed') banner.innerHTML = '<strong>Top 10 revealed</strong> &mdash; the top 10 nominees per category are shown below';
+  else if (p === 'top10_vote')     banner.innerHTML = '<strong>Voting open</strong> &mdash; vote for your favourite from the Top 10';
+  else if (p === 'top3_revealed')  banner.innerHTML = '<strong>Top 3 revealed</strong> &mdash; it\'s down to the final three in each category';
+  else if (p === 'top3_vote')      banner.innerHTML = '<strong>Final vote</strong> &mdash; cast your last vote to decide the winners';
+  else banner.innerHTML = '<strong>Voting closed</strong> &mdash; winners will be revealed at The Last Dance Gala';
 
   if (!categories.length) { el.innerHTML = '<div class="hidden-msg">Categories coming soon ❖</div>'; return; }
 
@@ -495,17 +537,26 @@ function renderNominate() {
         ${done ? '<div class="ok-msg">Nomination submitted — thank you ❖</div>' :
         isDuo ? `<div class="duo-col">
           <div class="duo-inputs">
-            <input class="nom-inp" id="nom_${cat.id}_1" placeholder="First person">
-            <input class="nom-inp" id="nom_${cat.id}_2" placeholder="Second person">
+            <div class="dd-wrap">
+              <input class="nom-inp" id="nom_${cat.id}_1" placeholder="Search first person…" autocomplete="off">
+              <div class="dd-list" id="ddl_${cat.id}_1" hidden></div>
+            </div>
+            <div class="dd-wrap">
+              <input class="nom-inp" id="nom_${cat.id}_2" placeholder="Search second person…" autocomplete="off">
+              <div class="dd-list" id="ddl_${cat.id}_2" hidden></div>
+            </div>
           </div>
           <button class="gold-btn" data-nom-btn="${cat.id}" onclick="submitNom(${cat.id})">Nominate</button>
         </div><div class="ok-msg" id="ok_${cat.id}"></div>` :
         `<div class="nom-row">
-          <input class="nom-inp" id="nom_${cat.id}_1" placeholder="Full name" onkeydown="if(event.key==='Enter')submitNom(${cat.id})">
+          <div class="dd-wrap">
+            <input class="nom-inp" id="nom_${cat.id}_1" placeholder="Search name…" autocomplete="off">
+            <div class="dd-list" id="ddl_${cat.id}_1" hidden></div>
+          </div>
           <button class="gold-btn" data-nom-btn="${cat.id}" onclick="submitNom(${cat.id})">Nominate</button>
         </div><div class="ok-msg" id="ok_${cat.id}"></div>`}
       </div>`;
-    } else if (p === 'voting') {
+    } else if (p === 'top10_vote' || p === 'top3_vote') {
       const approved = catNoms.filter(n => n.status === 'approved');
       if (!approved.length) return `<div class="cat-card"><div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div><div class="empty-note" style="margin-top:6px">Nominees being confirmed — check back soon</div></div>`;
       const hasVoted = approved.some(n => userVotes[n.id]);
@@ -522,9 +573,25 @@ function renderNominate() {
         <div class="ok-msg" id="ok_${cat.id}"></div>
       </div>`;
     } else {
-      return `<div class="cat-card"><div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div><div class="hidden-msg" style="padding:1rem 0">Results will be revealed at The Last Dance Gala ❖</div></div>`;
+      const count = getCount();
+      const approved = catNoms.filter(n => n.status === 'approved');
+      const sorted = [...approved].sort((a, b) => b.voteCount - a.voteCount).slice(0, count || approved.length);
+      return `<div class="cat-card">
+        <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div>
+        ${!sorted.length ? '<div class="hidden-msg" style="padding:1rem 0">Results will be revealed at The Last Dance Gala ❖</div>' :
+          sorted.map((nom, i) => `<div class="lb-entry${i===0?' top':''}" style="margin-bottom:5px">
+            <div class="lb-rank">${i+1}</div>
+            <div class="lb-name">${escHtml(nom.name)}</div>
+          </div>`).join('')}
+      </div>`;
     }
   }).join('');
+
+  categories.forEach(cat => {
+    if (p !== 'nominations' || userNominated[cat.id]) return;
+    buildDropdown(`nom_${cat.id}_1`, `ddl_${cat.id}_1`);
+    if (cat.type === 'duo') buildDropdown(`nom_${cat.id}_2`, `ddl_${cat.id}_2`);
+  });
 }
 
 function renderLeaderboard() {
