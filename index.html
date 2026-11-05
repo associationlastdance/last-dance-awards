@@ -325,11 +325,13 @@ async function loadAll() {
   userVotes = {};
   (myVotes || []).forEach(v => userVotes[v.nomination_id] = true);
 
-  try { userNominated = JSON.parse(localStorage.getItem('lda_nominated') || '{}'); } catch(e) { userNominated = {}; }
+  const nomKey = 'lda_nominated_' + currentVoterEmail;
+  try { userNominated = JSON.parse(localStorage.getItem(nomKey) || '{}'); } catch(e) { userNominated = {}; }
 }
 
 function saveNominated() {
-  localStorage.setItem('lda_nominated', JSON.stringify(userNominated));
+  const nomKey = 'lda_nominated_' + currentVoterEmail;
+  localStorage.setItem(nomKey, JSON.stringify(userNominated));
 }
 
 // ── Navigation ───────────────────────────────────────────────────────────────
