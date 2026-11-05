@@ -280,12 +280,14 @@ async function checkEmail() {
   btn.disabled = true;
   errEl.textContent = '';
 
+  // Save to localStorage so they don't have to re-enter on refresh
   localStorage.setItem('lda_voter_email', email);
   await signIn(email);
 }
 
 async function signIn(email) {
   currentVoterEmail = email;
+  // Show chip with first name
   const firstName = email.split('.')[0];
   const chip = document.getElementById('voterChip');
   chip.innerHTML = `<div class="voter-chip-dot"></div>${escHtml(firstName.charAt(0).toUpperCase() + firstName.slice(1))} <span style="opacity:0.5;font-size:9px">✕</span>`;
@@ -478,38 +480,46 @@ function getCount() {
   return null;
 }
 
+// Build a sorted name list from the ALLOWED_EMAILS set
 const VOTER_NAMES = Array.from(ALLOWED_EMAILS).map(email => {
   const parts = email.split('@')[0].split('.');
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+  // handle hyphenated first names like lilli-may or jean-baptiste
   const first = cap(parts[0].split('-').map(cap).join('-'));
   const last  = parts.slice(1).map(cap).join(' ');
   return { label: `${first} ${last}`, email };
 }).sort((a, b) => a.label.localeCompare(b.label));
 
-function buildDropdown(inputId, listId, onSelect) {
+// Searchable dropdown component
+function buildDropdown(inputId, listId) {
   const inp = document.getElementById(inputId);
   const lst = document.getElementById(listId);
   if (!inp || !lst) return;
-  inp.addEventListener('input', () => {
+
+  function showMatches() {
     const q = inp.value.trim().toLowerCase();
     if (!q) { lst.hidden = true; return; }
     const matches = VOTER_NAMES.filter(n => n.label.toLowerCase().includes(q)).slice(0, 8);
     if (!matches.length) { lst.hidden = true; return; }
-    lst.innerHTML = matches.map(n =>
-      `<div class="dd-item" onmousedown="event.preventDefault()" onclick="selectDd('${inputId}','${listId}',${JSON.stringify(n.label)})">
-        ${escHtml(n.label)}
-      </div>`
-    ).join('');
+    lst.innerHTML = '';
+    matches.forEach(n => {
+      const div = document.createElement('div');
+      div.className = 'dd-item';
+      div.textContent = n.label;
+      div.addEventListener('mousedown', e => e.preventDefault());
+      div.addEventListener('click', () => {
+        inp.value = n.label;
+        lst.hidden = true;
+        inp.focus();
+      });
+      lst.appendChild(div);
+    });
     lst.hidden = false;
-  });
-  inp.addEventListener('blur', () => { setTimeout(() => { lst.hidden = true; }, 150); });
-}
+  }
 
-function selectDd(inputId, listId, label) {
-  const inp = document.getElementById(inputId);
-  if (inp) inp.value = label;
-  const lst = document.getElementById(listId);
-  if (lst) lst.hidden = true;
+  inp.addEventListener('input', showMatches);
+  inp.addEventListener('focus', showMatches);
+  inp.addEventListener('blur', () => { setTimeout(() => { lst.hidden = true; }, 200); });
 }
 
 function renderNominate() {
@@ -573,6 +583,7 @@ function renderNominate() {
         <div class="ok-msg" id="ok_${cat.id}"></div>
       </div>`;
     } else {
+      // top10/top3 revealed phases — show leaderboard inline, no voting
       const count = getCount();
       const approved = catNoms.filter(n => n.status === 'approved');
       const sorted = [...approved].sort((a, b) => b.voteCount - a.voteCount).slice(0, count || approved.length);
@@ -587,6 +598,7 @@ function renderNominate() {
     }
   }).join('');
 
+  // Wire up all dropdowns after DOM update
   categories.forEach(cat => {
     if (p !== 'nominations' || userNominated[cat.id]) return;
     buildDropdown(`nom_${cat.id}_1`, `ddl_${cat.id}_1`);
@@ -645,11 +657,13 @@ function renderAdmin() {
 // ── Init ─────────────────────────────────────────────────────────────────────
 
 (async () => {
+  // Check if already signed in from a previous visit
   const savedEmail = localStorage.getItem('lda_voter_email');
   if (savedEmail && ALLOWED_EMAILS.has(savedEmail)) {
     document.getElementById('emailInput').value = savedEmail;
     await signIn(savedEmail);
   }
+  // Otherwise the email gate stays visible
 })();
 </script>
 </body>
