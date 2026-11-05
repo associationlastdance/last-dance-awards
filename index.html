@@ -412,16 +412,23 @@ async function submitNom(catId) {
   const btn = document.querySelector('[data-nom-btn="' + catId + '"]');
   if (btn) btn.disabled = true;
 
-  // Check if this name already exists in this category (case-insensitive)
-  const nameLower = name.toLowerCase();
-  const existing = nominations.find(n => n.category_id === catId && n.name.toLowerCase() === nameLower);
+  // Check Supabase directly for existing nomination with same name in this category
+  const { data: existing } = await sb.from('nominations')
+    .select('*')
+    .eq('category_id', catId)
+    .ilike('name', name)
+    .single();
 
   let success = false;
   if (existing) {
     // Already nominated — increment nomination_count
     const newCount = (existing.nomination_count || 1) + 1;
     const { error } = await sb.from('nominations').update({ nomination_count: newCount }).eq('id', existing.id);
-    if (!error) { existing.nomination_count = newCount; success = true; }
+    if (!error) {
+      const local = nominations.find(n => n.id === existing.id);
+      if (local) local.nomination_count = newCount;
+      success = true;
+    }
   } else {
     // New nomination
     const { data, error } = await sb.from('nominations').insert({category_id: catId, name, status: 'pending', nomination_count: 1}).select().single();
