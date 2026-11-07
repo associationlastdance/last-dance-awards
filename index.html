@@ -325,26 +325,14 @@ async function loadAll() {
   userVotes = {};
   (myVotes || []).forEach(v => userVotes[v.nomination_id] = true);
 
-  // Load nomination state from localStorage then sync against DB
-  // If a nomination was deleted from admin, the localStorage flag could be stale
-  const nomKey = 'lda_nominated_' + currentVoterEmail;
-  try { userNominated = JSON.parse(localStorage.getItem(nomKey) || '{}'); } catch(e) { userNominated = {}; }
-
-  // Sync: for each category flagged as "nominated", check if a nomination
-  // from this voter still exists in DB. If not, clear the flag.
-  const flaggedCatIds = Object.keys(userNominated).filter(k => userNominated[k]);
-  if (flaggedCatIds.length) {
-    const { data: myNoms } = await sb.from('nominations')
-      .select('id, category_id')
-      .eq('nominator_email', currentVoterEmail)
-      .in('category_id', flaggedCatIds.map(Number));
-    const stillExists = new Set((myNoms || []).map(n => String(n.category_id)));
-    let changed = false;
-    flaggedCatIds.forEach(cid => {
-      if (!stillExists.has(cid)) { delete userNominated[cid]; changed = true; }
-    });
-    if (changed) saveNominated();
-  }
+  // Load nomination state: source of truth is Supabase (nominator_email column).
+  // This handles: different devices, deleted nominations, stale localStorage.
+  const { data: myNoms } = await sb.from('nominations')
+    .select('category_id')
+    .eq('nominator_email', currentVoterEmail);
+  userNominated = {};
+  (myNoms || []).forEach(n => { userNominated[n.category_id] = true; });
+  saveNominated(); // keep localStorage in sync for fast reads
 }
 
 function saveNominated() {
@@ -422,10 +410,32 @@ async function rejectNom(nomId) {
 async function submitNom(catId) {
   const cat = categories.find(c => c.id === catId);
   if (!cat) return;
-  const v1 = document.getElementById('nom_' + catId + '_1').value.trim();
-  const v2 = cat.type === 'duo' ? document.getElementById('nom_' + catId + '_2').value.trim() : null;
+  const inp1 = document.getElementById('nom_' + catId + '_1');
+  const inp2 = cat.type === 'duo' ? document.getElementById('nom_' + catId + '_2') : null;
+  const v1 = inp1 ? inp1.value.trim() : '';
+  const v2 = inp2 ? inp2.value.trim() : null;
   if (!v1 || (cat.type === 'duo' && !v2)) return;
-  const name = cat.type === 'duo' ? v1 + ' & ' + v2 : v1;
+  // Validate both names were selected from the dropdown (not freetyped)
+  if (inp1 && inp1.dataset.validated !== 'true') {
+    const m = document.getElementById('ok_' + catId);
+    if (m) { m.classList.add('err-msg'); m.textContent = 'Please select a name from the list.'; setTimeout(() => { m.textContent = ''; m.classList.remove('err-msg'); }, 2500); }
+    if (btn) btn.disabled = false;
+    return;
+  }
+  if (inp2 && inp2.dataset.validated !== 'true') {
+    const m = document.getElementById('ok_' + catId);
+    if (m) { m.classList.add('err-msg'); m.textContent = 'Please select both names from the list.'; setTimeout(() => { m.textContent = ''; m.classList.remove('err-msg'); }, 2500); }
+    if (btn) btn.disabled = false;
+    return;
+  }
+  // For duos, sort names alphabetically so "A & B" and "B & A" are the same
+  let name;
+  if (cat.type === 'duo') {
+    const sorted = [v1, v2].sort((a, b) => a.localeCompare(b));
+    name = sorted[0] + ' & ' + sorted[1];
+  } else {
+    name = v1;
+  }
 
   const btn = document.querySelector('[data-nom-btn="' + catId + '"]');
   if (btn) btn.disabled = true;
@@ -550,15 +560,22 @@ function buildDropdown(inputId, listId) {
       div.addEventListener('mousedown', e => e.preventDefault());
       div.addEventListener('click', () => {
         inp.value = n.label;
+        inp.dataset.validated = 'true';
         lst.hidden = true;
         inp.focus();
+        // Enable the nominate button for this card once a valid selection is made
+        const card = inp.closest('[data-cat-card]');
+        if (card) {
+          const nomBtn = card.querySelector('[data-nom-btn]');
+          if (nomBtn) nomBtn.disabled = false;
+        }
       });
       lst.appendChild(div);
     });
     lst.hidden = false;
   }
 
-  inp.addEventListener('input', showMatches);
+  inp.addEventListener('input', () => { inp.dataset.validated = 'false'; showMatches(); });
   inp.addEventListener('focus', showMatches);
   inp.addEventListener('blur', () => { setTimeout(() => { lst.hidden = true; }, 200); });
 }
