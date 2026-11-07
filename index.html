@@ -325,8 +325,26 @@ async function loadAll() {
   userVotes = {};
   (myVotes || []).forEach(v => userVotes[v.nomination_id] = true);
 
+  // Load nomination state from localStorage then sync against DB
+  // If a nomination was deleted from admin, the localStorage flag could be stale
   const nomKey = 'lda_nominated_' + currentVoterEmail;
   try { userNominated = JSON.parse(localStorage.getItem(nomKey) || '{}'); } catch(e) { userNominated = {}; }
+
+  // Sync: for each category flagged as "nominated", check if a nomination
+  // from this voter still exists in DB. If not, clear the flag.
+  const flaggedCatIds = Object.keys(userNominated).filter(k => userNominated[k]);
+  if (flaggedCatIds.length) {
+    const { data: myNoms } = await sb.from('nominations')
+      .select('id, category_id')
+      .eq('nominator_email', currentVoterEmail)
+      .in('category_id', flaggedCatIds.map(Number));
+    const stillExists = new Set((myNoms || []).map(n => String(n.category_id)));
+    let changed = false;
+    flaggedCatIds.forEach(cid => {
+      if (!stillExists.has(cid)) { delete userNominated[cid]; changed = true; }
+    });
+    if (changed) saveNominated();
+  }
 }
 
 function saveNominated() {
@@ -431,7 +449,7 @@ async function submitNom(catId) {
     }
   } else {
     // New nomination
-    const { data, error } = await sb.from('nominations').insert({category_id: catId, name, status: 'pending', nomination_count: 1}).select().single();
+    const { data, error } = await sb.from('nominations').insert({category_id: catId, name, status: 'pending', nomination_count: 1, nominator_email: currentVoterEmail}).select().single();
     if (!error && data) { nominations.push({...data, voteCount: 0}); success = true; }
   }
 
@@ -670,8 +688,23 @@ function renderAdmin() {
         <div class="admin-cat-name">${escHtml(cat.name)} <span style="font-size:11px;color:#5a5040">(${cat.type})</span></div>
         <button class="del-btn" onclick="deleteCategory(${cat.id})">Delete</button>
       </div>
-      ${pend.length ? `<div class="sec-label">Pending nominations</div><div class="nom-tags">${pend.map(n => `<div class="nom-tag">${escHtml(n.name)}<button class="tag-approve" onclick="approveNom(${n.id})">&#10003;</button><button class="tag-reject" onclick="rejectNom(${n.id})">&#10005;</button></div>`).join('')}</div>` : ''}
-      ${appr.length ? `<div class="sec-label" style="${pend.length ? 'margin-top:8px' : ''}">Approved nominees</div><div class="nom-tags">${appr.map(n => `<div class="nom-tag">${escHtml(n.name)} <span style="color:#c9a84c" title="votes">${n.voteCount}v</span>${n.nomination_count > 1 ? ` <span style="color:#8a8070" title="nominations">${n.nomination_count}n</span>` : ''}<button class="tag-reject" onclick="rejectNom(${n.id})">&#10005;</button></div>`).join('')}</div>` : ''}
+      ${pend.length ? `<div class="sec-label">Pending nominations</div><div class="nom-tags">${pend.map(n => `<div class="nom-tag" style="flex-direction:column;align-items:flex-start;gap:3px;padding:6px 10px">
+          <div style="display:flex;align-items:center;gap:5px;width:100%">
+            <span style="flex:1">${escHtml(n.name)}</span>
+            <button class="tag-approve" onclick="approveNom(${n.id})">&#10003;</button>
+            <button class="tag-reject" onclick="rejectNom(${n.id})">&#10005;</button>
+          </div>
+          ${n.nominator_email ? `<span style="font-size:10px;color:#5a5040">by ${escHtml(n.nominator_email.split('@')[0].replace('.',' '))}</span>` : ''}
+        </div>`).join('')}</div>` : ''}
+      ${appr.length ? `<div class="sec-label" style="${pend.length ? 'margin-top:8px' : ''}">Approved nominees</div><div class="nom-tags">${appr.map(n => `<div class="nom-tag" style="flex-direction:column;align-items:flex-start;gap:3px;padding:6px 10px">
+          <div style="display:flex;align-items:center;gap:5px;width:100%">
+            <span style="flex:1">${escHtml(n.name)}</span>
+            <span style="color:#c9a84c;font-size:10px" title="votes">${n.voteCount}v</span>
+            ${n.nomination_count > 1 ? `<span style="color:#8a8070;font-size:10px" title="nominations">${n.nomination_count}n</span>` : ''}
+            <button class="tag-reject" onclick="rejectNom(${n.id})">&#10005;</button>
+          </div>
+          ${n.nominator_email ? `<span style="font-size:10px;color:#5a5040">by ${escHtml(n.nominator_email.split('@')[0].replace('.',' '))}</span>` : ''}
+        </div>`).join('')}</div>` : ''}
       ${!pend.length && !appr.length ? '<div class="empty-note">No nominations yet</div>' : ''}
     </div>`;
   }).join('');
