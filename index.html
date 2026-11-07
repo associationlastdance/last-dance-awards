@@ -456,16 +456,16 @@ async function submitNom(catId) {
   if (success) {
     userNominated[catId] = true;
     saveNominated();
-    document.getElementById('nom_' + catId + '_1').value = '';
-    if (cat.type === 'duo') document.getElementById('nom_' + catId + '_2').value = '';
-    const m = document.getElementById('ok_' + catId);
-    if (m) { m.textContent = 'Nomination submitted ❖'; setTimeout(() => m.textContent = '', 2500); }
+    // Replace just this card with the "submitted" confirmation, leave all other cards untouched
+    const card = document.querySelector(`[data-cat-card="${catId}"]`);
+    if (card) {
+      card.innerHTML = `<div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${cat.type === 'duo' ? 'Duo' : 'Solo'}</div></div><div class="ok-msg">Nomination submitted — thank you ❖</div>`;
+    }
   } else {
     const m = document.getElementById('ok_' + catId);
     if (m) { m.classList.add('err-msg'); m.textContent = 'Error submitting. Try again.'; setTimeout(() => { m.textContent = ''; m.classList.remove('err-msg'); }, 2500); }
   }
   if (btn) btn.disabled = false;
-  renderNominate();
 }
 
 async function submitVote(catId) {
@@ -583,7 +583,7 @@ function renderNominate() {
 
     if (p === 'nominations') {
       const done = userNominated[cat.id];
-      return `<div class="cat-card">
+      return `<div class="cat-card" data-cat-card="${cat.id}">
         <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div>
         ${done ? '<div class="ok-msg">Nomination submitted — thank you ❖</div>' :
         isDuo ? `<div class="duo-col">
