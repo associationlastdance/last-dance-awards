@@ -439,6 +439,25 @@ async function submitNom(catId) {
 
   if (btn) btn.disabled = true;
 
+  // Block re-nomination: check if this person already nominated in this category
+  const { data: alreadyNominated } = await sb.from('nominators')
+    .select('id')
+    .eq('category_id', catId)
+    .eq('nominator_email', currentVoterEmail)
+    .single();
+
+  if (alreadyNominated) {
+    userNominated[catId] = true;
+    saveNominated();
+    const card = document.querySelector(`[data-cat-card="${catId}"]`);
+    if (card) {
+      const cat2 = categories.find(c => c.id === catId);
+      card.innerHTML = `<div class="cat-hd"><div class="cat-name">${escHtml(cat2.name)}</div><div class="cat-badge">${cat2.type === 'duo' ? 'Duo' : 'Solo'}</div></div><div class="ok-msg">Nomination submitted — thank you ❖</div>`;
+    }
+    if (btn) btn.disabled = false;
+    return;
+  }
+
   // Check Supabase directly for existing nomination with same name in this category
   const { data: existing } = await sb.from('nominations')
     .select('*')
