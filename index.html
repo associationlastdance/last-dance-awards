@@ -788,7 +788,6 @@ function renderAdmin() {
           ${n.nominator_email ? `<span style="font-size:10px;color:#5a5040">by ${escHtml(n.nominator_email.split('@')[0].replace('.',' '))}</span>` : ''}
         </div>`).join('')}</div>` : ''}
       ${appr.length ? `<div class="sec-label" style="${pend.length ? 'margin-top:8px' : ''}">Approved nominees</div><div class="nom-tags">${appr.map(n => {
-        const nominatorList = (allNominators[cat.id] || []).map(e => e.split('@')[0].split('.').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ')).join(', ');
         return `<div class="nom-tag" style="flex-direction:column;align-items:flex-start;gap:3px;padding:6px 10px">
           <div style="display:flex;align-items:center;gap:5px;width:100%">
             <span style="flex:1">${escHtml(n.name)}</span>
@@ -796,7 +795,6 @@ function renderAdmin() {
             ${n.nomination_count > 1 ? `<span style="color:#8a8070;font-size:10px" title="nominations">${n.nomination_count}n</span>` : ''}
             <button class="tag-reject" onclick="rejectNom(${n.id})">&#10005;</button>
           </div>
-          ${nominatorList ? `<span style="font-size:10px;color:#5a5040">nominated by: ${escHtml(nominatorList)}</span>` : ''}
         </div>`}).join('')}</div>` : ''}
       ${!pend.length && !appr.length ? '<div class="empty-note">No nominations yet</div>' : ''}
     </div>`;
