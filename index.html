@@ -736,8 +736,9 @@ function renderAdmin() {
     } else {
       rankEl.innerHTML = categories.map(cat => {
         const approved = nominations.filter(n => n.category_id === cat.id && n.status === 'approved');
-        const sorted = [...approved].sort((a, b) => b.voteCount - a.voteCount);
-        const max = sorted.length ? (sorted[0].voteCount || 1) : 1;
+        const useVotes = currentPhase !== 'nominations' && currentPhase !== 'top10_revealed';
+        const sorted = [...approved].sort((a, b) => useVotes ? b.voteCount - a.voteCount : (b.nomination_count || 1) - (a.nomination_count || 1));
+        const max = sorted.length ? (useVotes ? (sorted[0].voteCount || 1) : (sorted[0].nomination_count || 1)) : 1;
         return `<div style="margin-bottom:1.25rem">
           <div style="font-family:'Playfair Display',Georgia,serif;font-size:13px;color:#faf7f2;margin-bottom:6px">${escHtml(cat.name)}</div>
           ${!sorted.length ? '<div class="empty-note">No approved nominees yet</div>' :
@@ -745,7 +746,7 @@ function renderAdmin() {
               <div style="font-size:12px;color:${i<3?'#c9a84c':'#5a5040'};width:16px;text-align:center;font-weight:${i<3?'700':'400'}">${i+1}</div>
               <div style="flex:1;font-size:12px;color:#e8e0d0">${escHtml(n.name)}</div>
               <div style="width:60px;height:3px;background:#2a2a2a;border-radius:99px;overflow:hidden"><div style="height:100%;background:#c9a84c;border-radius:99px;width:${Math.round((n.voteCount/max)*100)}%"></div></div>
-              <div style="font-size:11px;color:#5a5040;min-width:32px;text-align:right">${n.voteCount}v / ${n.nomination_count || 1}n</div>
+              <div style="font-size:11px;color:#5a5040;min-width:32px;text-align:right">${useVotes ? n.voteCount+'v / ' : ''}${n.nomination_count || 1}n</div>
             </div>`).join('')}
         </div>`;
       }).join('');
