@@ -715,8 +715,31 @@ function renderLeaderboard() {
 
   el.innerHTML = categories.map(cat => {
     const approved = nominations.filter(n => n.category_id === cat.id && n.status === 'approved');
-    const sorted = [...approved].sort((a, b) => b.voteCount - a.voteCount).slice(0, count);
-    const max = sorted.length ? (sorted[0].voteCount || 1) : 1;
+    const p = currentPhase;
+
+    let sorted;
+    let useVotes = false;
+    if (p === 'top10_revealed' || p === 'top10_vote') {
+      // Top 10 by nomination count
+      sorted = [...approved].sort((a, b) => (b.nomination_count||1) - (a.nomination_count||1)).slice(0, 10);
+      useVotes = false;
+    } else if (p === 'top3_revealed' || p === 'top3_vote') {
+      // Top 3 by votes, from within the top 10 by nominations
+      const top10 = [...approved].sort((a, b) => (b.nomination_count||1) - (a.nomination_count||1)).slice(0, 10);
+      sorted = [...top10].sort((a, b) => b.voteCount - a.voteCount).slice(0, 3);
+      useVotes = true;
+    } else if (p === 'winners') {
+      // Winner: top 1 by votes, from within top 3 by votes from top 10
+      const top10 = [...approved].sort((a, b) => (b.nomination_count||1) - (a.nomination_count||1)).slice(0, 10);
+      const top3 = [...top10].sort((a, b) => b.voteCount - a.voteCount).slice(0, 3);
+      sorted = [...top3].sort((a, b) => b.voteCount - a.voteCount).slice(0, 1);
+      useVotes = true;
+    } else {
+      sorted = [];
+      useVotes = false;
+    }
+
+    const max = sorted.length ? (useVotes ? (sorted[0].voteCount || 1) : (sorted[0].nomination_count || 1)) : 1;
     const label = count === 1 ? 'Winner' : `Top ${Math.min(count, sorted.length)}`;
     return `<div class="lb-cat">
       <div class="lb-cat-name">${escHtml(cat.name)}</div>
@@ -725,8 +748,8 @@ function renderLeaderboard() {
         <div class="lb-entry${i === 0 ? ' top' : ''}">
           <div class="lb-rank">${i + 1}</div>
           <div class="lb-name">${escHtml(nom.name)}</div>
-          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round((nom.voteCount / max) * 100)}%"></div></div>
-          <div class="lb-votes">${nom.voteCount}</div>
+          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round(((useVotes ? nom.voteCount : (nom.nomination_count||1)) / max) * 100)}%"></div></div>
+          <div class="lb-votes">${useVotes ? nom.voteCount : (nom.nomination_count||1)}</div>
         </div>`).join('')}
     </div>`;
   }).join('');
