@@ -741,8 +741,6 @@ function renderLeaderboard() {
         <div class="lb-entry${i === 0 ? ' top' : ''}">
           <div class="lb-rank">${i + 1}</div>
           <div class="lb-name">${escHtml(nom.name)}</div>
-          <div class="lb-bar-wrap"><div class="lb-bar" style="width:${Math.round(((useVotes ? nom.voteCount : (nom.nomination_count||1)) / max) * 100)}%"></div></div>
-          <div class="lb-votes">${useVotes ? nom.voteCount : (nom.nomination_count||1)}</div>
         </div>`).join('')}
     </div>`;
   }).join('');
