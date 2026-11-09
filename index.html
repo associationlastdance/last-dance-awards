@@ -750,12 +750,18 @@ function renderAdmin() {
         return `<div style="margin-bottom:1.25rem">
           <div style="font-family:'Playfair Display',Georgia,serif;font-size:13px;color:#faf7f2;margin-bottom:6px">${escHtml(cat.name)}</div>
           ${!sorted.length ? '<div class="empty-note">No approved nominees yet</div>' :
-            sorted.map((n, i) => `<div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
-              <div style="font-size:12px;color:${i<3?'#c9a84c':'#5a5040'};width:16px;text-align:center;font-weight:${i<3?'700':'400'}">${i+1}</div>
-              <div style="flex:1;font-size:12px;color:#e8e0d0">${escHtml(n.name)}</div>
-              <div style="width:60px;height:3px;background:#2a2a2a;border-radius:99px;overflow:hidden"><div style="height:100%;background:#c9a84c;border-radius:99px;width:${Math.round((n.voteCount/max)*100)}%"></div></div>
-              <div style="font-size:11px;color:#5a5040;min-width:32px;text-align:right">${useVotes ? n.voteCount+'v / ' : ''}${n.nomination_count || 1}n</div>
-            </div>`).join('')}
+            sorted.map((n, i) => {
+              const nominatorList = (allNominators[cat.id] || []).map(e => e.split('@')[0].split('.').map(w => w.charAt(0).toUpperCase()+w.slice(1)).join(' ')).join(', ');
+              return `<div style="margin-bottom:8px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="font-size:12px;color:${i<3?'#c9a84c':'#5a5040'};width:16px;text-align:center;font-weight:${i<3?'700':'400'}">${i+1}</div>
+                  <div style="flex:1;font-size:12px;color:#e8e0d0">${escHtml(n.name)}</div>
+                  <div style="width:60px;height:3px;background:#2a2a2a;border-radius:99px;overflow:hidden"><div style="height:100%;background:#c9a84c;border-radius:99px;width:${Math.round(((useVotes?n.voteCount:(n.nomination_count||1))/max)*100)}%"></div></div>
+                  <div style="font-size:11px;color:#5a5040;min-width:32px;text-align:right">${useVotes ? n.voteCount+'v / ' : ''}${n.nomination_count || 1}n</div>
+                </div>
+                ${nominatorList ? `<div style="font-size:10px;color:#3a3028;padding-left:26px;margin-top:2px">${escHtml(nominatorList)}</div>` : ''}
+              </div>`;
+            }).join('')
         </div>`;
       }).join('');
     }
