@@ -280,14 +280,12 @@ async function checkEmail() {
   btn.disabled = true;
   errEl.textContent = '';
 
-  // Save to localStorage so they don't have to re-enter on refresh
   localStorage.setItem('lda_voter_email', email);
   await signIn(email);
 }
 
 async function signIn(email) {
   currentVoterEmail = email;
-  // Show chip with first name
   const firstName = email.split('.')[0];
   const chip = document.getElementById('voterChip');
   chip.innerHTML = `<div class="voter-chip-dot"></div>${escHtml(firstName.charAt(0).toUpperCase() + firstName.slice(1))} <span style="opacity:0.5;font-size:9px">✕</span>`;
@@ -325,14 +323,14 @@ async function loadAll() {
   userVotes = {};
   (myVotes || []).forEach(v => userVotes[v.nomination_id] = true);
 
-  // Load nomination state: source of truth is Supabase (nominator_email column).
-  // This handles: different devices, deleted nominations, stale localStorage.
-  const { data: myNoms } = await sb.from('nominations')
+  // ── FIX: use nominators table as source of truth for who-nominated-what ──
+  // This correctly handles duplicate nominations (same name nominated by multiple people)
+  const { data: myNoms } = await sb.from('nominators')
     .select('category_id')
     .eq('nominator_email', currentVoterEmail);
   userNominated = {};
   (myNoms || []).forEach(n => { userNominated[n.category_id] = true; });
-  saveNominated(); // keep localStorage in sync for fast reads
+  saveNominated();
 }
 
 function saveNominated() {
@@ -415,7 +413,9 @@ async function submitNom(catId) {
   const v1 = inp1 ? inp1.value.trim() : '';
   const v2 = inp2 ? inp2.value.trim() : null;
   if (!v1 || (cat.type === 'duo' && !v2)) return;
-  // Validate both names were selected from the dropdown (not freetyped)
+
+  const btn = document.querySelector('[data-nom-btn="' + catId + '"]');
+
   if (inp1 && inp1.dataset.validated !== 'true') {
     const m = document.getElementById('ok_' + catId);
     if (m) { m.classList.add('err-msg'); m.textContent = 'Please select a name from the list.'; setTimeout(() => { m.textContent = ''; m.classList.remove('err-msg'); }, 2500); }
@@ -428,7 +428,7 @@ async function submitNom(catId) {
     if (btn) btn.disabled = false;
     return;
   }
-  // For duos, sort names alphabetically so "A & B" and "B & A" are the same
+
   let name;
   if (cat.type === 'duo') {
     const sorted = [v1, v2].sort((a, b) => a.localeCompare(b));
@@ -437,7 +437,6 @@ async function submitNom(catId) {
     name = v1;
   }
 
-  const btn = document.querySelector('[data-nom-btn="' + catId + '"]');
   if (btn) btn.disabled = true;
 
   // Check Supabase directly for existing nomination with same name in this category
@@ -449,24 +448,35 @@ async function submitNom(catId) {
 
   let success = false;
   if (existing) {
-    // Already nominated — increment nomination_count
+    // Already nominated — increment nomination_count only
     const newCount = (existing.nomination_count || 1) + 1;
-    const { error } = await sb.from('nominations').update({ nomination_count: newCount }).eq('id', existing.id);
+    const { error } = await sb.from('nominations')
+      .update({ nomination_count: newCount })
+      .eq('id', existing.id);
     if (!error) {
       const local = nominations.find(n => n.id === existing.id);
       if (local) local.nomination_count = newCount;
       success = true;
     }
   } else {
-    // New nomination
-    const { data, error } = await sb.from('nominations').insert({category_id: catId, name, status: 'pending', nomination_count: 1, nominator_email: currentVoterEmail}).select().single();
+    // New nomination — insert into nominations table
+    const { data, error } = await sb.from('nominations')
+      .insert({category_id: catId, name, status: 'pending', nomination_count: 1, nominator_email: currentVoterEmail})
+      .select().single();
     if (!error && data) { nominations.push({...data, voteCount: 0}); success = true; }
   }
 
   if (success) {
+    // ── FIX: always record this person nominated in this category ──
+    // Uses upsert with the unique(category_id, nominator_email) constraint,
+    // so safe to call whether this is a new or duplicate nomination.
+    await sb.from('nominators').upsert(
+      { category_id: catId, nominator_email: currentVoterEmail },
+      { onConflict: 'category_id,nominator_email', ignoreDuplicates: true }
+    );
+
     userNominated[catId] = true;
     saveNominated();
-    // Replace just this card with the "submitted" confirmation, leave all other cards untouched
     const card = document.querySelector(`[data-cat-card="${catId}"]`);
     if (card) {
       card.innerHTML = `<div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${cat.type === 'duo' ? 'Duo' : 'Solo'}</div></div><div class="ok-msg">Nomination submitted — thank you ❖</div>`;
@@ -531,17 +541,14 @@ function getCount() {
   return null;
 }
 
-// Build a sorted name list from the ALLOWED_EMAILS set
 const VOTER_NAMES = Array.from(ALLOWED_EMAILS).map(email => {
   const parts = email.split('@')[0].split('.');
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
-  // handle hyphenated first names like lilli-may or jean-baptiste
   const first = cap(parts[0].split('-').map(cap).join('-'));
   const last  = parts.slice(1).map(cap).join(' ');
   return { label: `${first} ${last}`, email };
 }).sort((a, b) => a.label.localeCompare(b.label));
 
-// Searchable dropdown component
 function buildDropdown(inputId, listId) {
   const inp = document.getElementById(inputId);
   const lst = document.getElementById(listId);
@@ -563,7 +570,6 @@ function buildDropdown(inputId, listId) {
         inp.dataset.validated = 'true';
         lst.hidden = true;
         inp.focus();
-        // Enable the nominate button for this card once a valid selection is made
         const card = inp.closest('[data-cat-card]');
         if (card) {
           const nomBtn = card.querySelector('[data-nom-btn]');
@@ -641,7 +647,6 @@ function renderNominate() {
         <div class="ok-msg" id="ok_${cat.id}"></div>
       </div>`;
     } else {
-      // top10/top3 revealed phases — show leaderboard inline, no voting
       const count = getCount();
       const approved = catNoms.filter(n => n.status === 'approved');
       const sorted = [...approved].sort((a, b) => b.voteCount - a.voteCount).slice(0, count || approved.length);
@@ -656,7 +661,6 @@ function renderNominate() {
     }
   }).join('');
 
-  // Wire up all dropdowns after DOM update
   categories.forEach(cat => {
     if (p !== 'nominations' || userNominated[cat.id]) return;
     buildDropdown(`nom_${cat.id}_1`, `ddl_${cat.id}_1`);
@@ -730,13 +734,11 @@ function renderAdmin() {
 // ── Init ─────────────────────────────────────────────────────────────────────
 
 (async () => {
-  // Check if already signed in from a previous visit
   const savedEmail = localStorage.getItem('lda_voter_email');
   if (savedEmail && ALLOWED_EMAILS.has(savedEmail)) {
     document.getElementById('emailInput').value = savedEmail;
     await signIn(savedEmail);
   }
-  // Otherwise the email gate stays visible
 })();
 </script>
 </body>
