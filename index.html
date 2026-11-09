@@ -336,13 +336,6 @@ async function loadAll() {
   (myNoms || []).forEach(n => { userNominated[n.category_id] = true; });
   saveNominated();
 
-  // Load all nominators for admin view (category_id level — one entry per person per category)
-  const { data: allNoms } = await sb.from('nominators').select('category_id, nominator_email');
-  allNominators = {};
-  (allNoms || []).forEach(n => {
-    if (!allNominators[n.category_id]) allNominators[n.category_id] = [];
-    allNominators[n.category_id].push(n.nominator_email);
-  });
 }
 
 function saveNominated() {
