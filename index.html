@@ -575,13 +575,10 @@ function getCount() {
 
 // ── Random shuffle — randomised once on page load, same for everyone ─────────
 // Order is not the ranked order, but it stays stable while you're on the page.
-const _shuffleSeed = Math.random();
 function seededShuffle(arr) {
   const a = [...arr];
-  let s = (_shuffleSeed * 2 ** 32) >>> 0;
   for (let i = a.length - 1; i > 0; i--) {
-    s = (s * 1664525 + 1013904223) >>> 0;
-    const j = s % (i + 1);
+    const j = Math.floor(Math.random() * (i + 1));
     [a[i], a[j]] = [a[j], a[i]];
   }
   return a;
