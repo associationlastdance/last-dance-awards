@@ -573,6 +573,20 @@ function getCount() {
   return null;
 }
 
+// ── Random shuffle — randomised once on page load, same for everyone ─────────
+// Order is not the ranked order, but it stays stable while you're on the page.
+const _shuffleSeed = Math.random();
+function seededShuffle(arr) {
+  const a = [...arr];
+  let s = (_shuffleSeed * 2 ** 32) >>> 0;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    const j = s % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 const VOTER_NAMES = Array.from(ALLOWED_EMAILS).map(email => {
   const parts = email.split('@')[0].split('.');
   const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -665,8 +679,8 @@ function renderNominate() {
     } else if (p === 'top10_vote' || p === 'top3_vote') {
       const approved = catNoms.filter(n => n.status === 'approved');
       if (!approved.length) return `<div class="cat-card"><div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div><div class="empty-note" style="margin-top:6px">Nominees being confirmed — check back soon</div></div>`;
-      const top10 = [...approved].sort((a, b) => (b.nomination_count||1) - (a.nomination_count||1)).slice(0, 10);
-      const votePool = p === 'top3_vote' ? [...top10].sort((a, b) => b.voteCount - a.voteCount).slice(0, 3) : top10;
+      const top10 = seededShuffle([...approved].sort((a, b) => (b.nomination_count||1) - (a.nomination_count||1)).slice(0, 10));
+      const votePool = p === 'top3_vote' ? seededShuffle([...approved].sort((a, b) => (b.nomination_count||1) - (a.nomination_count||1)).slice(0, 10).sort((a, b) => b.voteCount - a.voteCount).slice(0, 3)) : top10;
       const hasVoted = votePool.some(n => userVotes[n.id]);
       return `<div class="cat-card">
         <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div>
@@ -727,16 +741,16 @@ function renderLeaderboard() {
     let sorted;
     let useVotes = false;
     if (p === 'top10_revealed' || p === 'top10_vote') {
-      // Top 10 by nomination count
-      sorted = [...approved].sort((a, b) => (b.nomination_count||1) - (a.nomination_count||1)).slice(0, 10);
+      // Top 10 shuffled — no ranking visible to voters
+      sorted = seededShuffle([...approved].sort((a, b) => (b.nomination_count||1) - (a.nomination_count||1)).slice(0, 10));
       useVotes = false;
     } else if (p === 'top3_revealed' || p === 'top3_vote') {
-      // Top 3 by votes, from within the top 10 by nominations
+      // Top 3 shuffled — no ranking visible to voters
       const top10 = [...approved].sort((a, b) => (b.nomination_count||1) - (a.nomination_count||1)).slice(0, 10);
-      sorted = [...top10].sort((a, b) => b.voteCount - a.voteCount).slice(0, 3);
+      sorted = seededShuffle([...top10].sort((a, b) => b.voteCount - a.voteCount).slice(0, 3));
       useVotes = true;
     } else if (p === 'winners') {
-      // Winner: top 1 by votes, from within top 3 by votes from top 10
+      // Winner revealed — only 1 entry, no need to shuffle
       const top10 = [...approved].sort((a, b) => (b.nomination_count||1) - (a.nomination_count||1)).slice(0, 10);
       const top3 = [...top10].sort((a, b) => b.voteCount - a.voteCount).slice(0, 3);
       sorted = [...top3].sort((a, b) => b.voteCount - a.voteCount).slice(0, 1);
@@ -746,14 +760,12 @@ function renderLeaderboard() {
       useVotes = false;
     }
 
-    const max = sorted.length ? (useVotes ? (sorted[0].voteCount || 1) : (sorted[0].nomination_count || 1)) : 1;
     const label = count === 1 ? 'Winner' : `Top ${Math.min(count, sorted.length)}`;
     return `<div class="lb-cat">
       <div class="lb-cat-name">${escHtml(cat.name)}</div>
       <div class="lb-phase">${label} &middot; ${cat.type === 'duo' ? 'Duo' : 'Solo'}</div>
       ${!sorted.length ? '<div class="empty-note">No nominees yet</div>' : sorted.map((nom, i) => `
-        <div class="lb-entry${i === 0 ? ' top' : ''}">
-          <div class="lb-rank">${i + 1}</div>
+        <div class="lb-entry">
           <div class="lb-name">${escHtml(nom.name)}</div>
         </div>`).join('')}
     </div>`;
