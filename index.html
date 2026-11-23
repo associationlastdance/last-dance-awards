@@ -533,10 +533,8 @@ async function submitVote(catId) {
   const prevVotedId = catNomIds.find(id => userVotes[id]);
 
   if (prevVotedId) {
-    await sb.from('votes').delete().eq('nomination_id', prevVotedId).eq('voter_id', voterId);
-    delete userVotes[prevVotedId];
-    const prev = nominations.find(n => n.id === prevVotedId);
-    if (prev && prev.voteCount > 0) prev.voteCount--;
+    if (btn) btn.disabled = false;
+    return;
   }
 
   const { error } = await sb.from('votes').insert({nomination_id: nomId, voter_id: voterId});
@@ -688,7 +686,7 @@ function renderNominate() {
             <div class="vote-name">${escHtml(nom.name)}</div>
           </div>`).join('')}
         </div>
-        <button class="outline-btn" data-vote-btn="${cat.id}" onclick="submitVote(${cat.id})">${hasVoted ? 'Update vote' : 'Cast vote'}</button>
+        ${hasVoted ? '<div class="ok-msg" style="margin-top:9px">Vote cast ❖</div>' : `<button class="outline-btn" data-vote-btn="${cat.id}" onclick="submitVote(${cat.id})">Cast vote</button>`}
         <div class="ok-msg" id="ok_${cat.id}"></div>
       </div>`;
     } else {
