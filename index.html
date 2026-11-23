@@ -680,14 +680,15 @@ function renderNominate() {
       const hasVoted = votePool.some(n => userVotes[n.id]);
       return `<div class="cat-card">
         <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div>
+        ${hasVoted ? '<div class="ok-msg" style="padding:1.2rem 0">Vote cast ❖</div>' : `
         <div class="vote-list">${votePool.map(nom => `
-          <div class="vote-opt${userVotes[nom.id] ? ' sel' : ''}${hasVoted ? ' voted-lock' : ''}" data-vopt="${cat.id}"${hasVoted ? '' : ` onclick="selectVote(this,${cat.id})"`}>
+          <div class="vote-opt" data-vopt="${cat.id}" onclick="selectVote(this,${cat.id})">
             <div class="vote-radio"><div class="vote-dot"></div></div>
-            <input type="radio" name="v_${cat.id}" value="${nom.id}" style="display:none"${userVotes[nom.id] ? ' checked' : ''}>
+            <input type="radio" name="v_${cat.id}" value="${nom.id}" style="display:none">
             <div class="vote-name">${escHtml(nom.name)}</div>
           </div>`).join('')}
         </div>
-        ${hasVoted ? '<div class="ok-msg" style="margin-top:9px">Vote cast ❖</div>' : `<button class="outline-btn" data-vote-btn="${cat.id}" onclick="submitVote(${cat.id})">Cast vote</button>`}
+        <button class="outline-btn" data-vote-btn="${cat.id}" onclick="submitVote(${cat.id})">Cast vote</button>`}
         <div class="ok-msg" id="ok_${cat.id}"></div>
       </div>`;
     } else {
