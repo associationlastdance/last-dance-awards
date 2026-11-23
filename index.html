@@ -61,6 +61,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .vote-opt.sel .vote-dot { display: block; }
 .vote-name { flex: 1; font-size: 13px; color: #e8e0d0; }
 .vote-count { font-size: 11px; color: #5a5040; }
+.voted-lock { cursor: default; opacity: 0.6; pointer-events: none; }
 .ok-msg { font-size: 11px; color: #c9a84c; text-align: center; margin-top: 7px; min-height: 16px; }
 .err-msg { font-size: 11px; color: #e24b4a; text-align: center; margin-top: 7px; min-height: 16px; }
 .lb-cat { margin-bottom: 2rem; }
@@ -680,7 +681,7 @@ function renderNominate() {
       return `<div class="cat-card">
         <div class="cat-hd"><div class="cat-name">${escHtml(cat.name)}</div><div class="cat-badge">${isDuo ? 'Duo' : 'Solo'}</div></div>
         <div class="vote-list">${votePool.map(nom => `
-          <div class="vote-opt${userVotes[nom.id] ? ' sel' : ''}" data-vopt="${cat.id}" onclick="selectVote(this,${cat.id})">
+          <div class="vote-opt${userVotes[nom.id] ? ' sel' : ''}${hasVoted ? ' voted-lock' : ''}" data-vopt="${cat.id}"${hasVoted ? '' : ` onclick="selectVote(this,${cat.id})"`}>
             <div class="vote-radio"><div class="vote-dot"></div></div>
             <input type="radio" name="v_${cat.id}" value="${nom.id}" style="display:none"${userVotes[nom.id] ? ' checked' : ''}>
             <div class="vote-name">${escHtml(nom.name)}</div>
