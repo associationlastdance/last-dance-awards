@@ -144,6 +144,28 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 </head>
 <body>
 
+<!-- Voting Paused Overlay -->
+<div id="votingPausedOverlay" style="position:fixed;inset:0;background:#0a0a0a;z-index:200;display:flex;align-items:center;justify-content:center;padding:2rem;">
+  <div style="width:100%;max-width:480px;text-align:center;">
+    <div style="font-size:10px;font-weight:600;letter-spacing:0.3em;color:#c9a84c;text-transform:uppercase;margin-bottom:18px;">EHL · Lausanne</div>
+    <div style="font-family:'Playfair Display',Georgia,serif;font-size:28px;font-weight:400;color:#faf7f2;line-height:1.2;margin-bottom:6px;">The Last Dance <em style="color:#c9a84c;font-style:italic;">Awards</em></div>
+    <div style="font-family:'Playfair Display',Georgia,serif;font-size:13px;color:#8a8070;margin-bottom:32px;">2026</div>
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:32px;">
+      <div style="flex:1;max-width:80px;height:0.5px;background:linear-gradient(90deg,transparent,#c9a84c);"></div>
+      <div style="width:6px;height:6px;background:#c9a84c;transform:rotate(45deg);"></div>
+      <div style="flex:1;max-width:80px;height:0.5px;background:linear-gradient(90deg,#c9a84c,transparent);"></div>
+    </div>
+    <div style="font-size:11px;font-weight:700;letter-spacing:0.25em;color:#c9a84c;text-transform:uppercase;margin-bottom:16px;">Voting Temporarily Unavailable</div>
+    <div style="font-size:14px;color:#b0a89a;line-height:1.75;margin-bottom:32px;">To ensure a fair and reliable voting process, we are making a few adjustments to our voting system.<br><br>Voting will resume shortly through Microsoft Forms.</div>
+    <div style="font-size:12px;color:#5a5040;letter-spacing:0.08em;">Thank you for your understanding.</div>
+    <div style="margin-top:28px;display:flex;align-items:center;justify-content:center;gap:10px;">
+      <div style="flex:1;max-width:60px;height:0.5px;background:linear-gradient(90deg,transparent,rgba(201,168,76,0.3));"></div>
+      <div style="font-size:10px;font-weight:600;letter-spacing:0.2em;color:#5a5040;text-transform:uppercase;">Association Last Dance</div>
+      <div style="flex:1;max-width:60px;height:0.5px;background:linear-gradient(90deg,rgba(201,168,76,0.3),transparent);"></div>
+    </div>
+  </div>
+</div>
+
 <!-- Email Gate Overlay -->
 <div id="emailGate">
   <div class="email-gate-box">
